@@ -1,34 +1,63 @@
-name: Build Linux AppImage
+name: CI
 
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
+  build-windows:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Test
+        run: dotnet test src/PeerlessPatcher.Tests/PeerlessPatcher.Tests.csproj --configuration Release
+
+      - name: Publish
+        run: >
+          dotnet publish src/PeerlessPatcher/PeerlessPatcher.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -o dist/win-x64
+
+      - name: Zip
+        run: Compress-Archive -Path dist/win-x64/* -DestinationPath PeerlessPatcher-windows-x64.zip
+        shell: pwsh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PeerlessPatcher-windows-x64
+          path: PeerlessPatcher-windows-x64.zip
+          if-no-files-found: error
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1 libx11-6 libxext6 fuse
+          sudo apt-get install -y libgl1 libx11-6 libxext6 fuse liblttng-ust1
 
-      - name: Run tests
+      - name: Test
         run: dotnet test src/PeerlessPatcher.Tests/PeerlessPatcher.Tests.csproj --configuration Release
 
-      - name: Publish self-contained Linux x64
+      - name: Publish
         run: |
           dotnet publish src/PeerlessPatcher/PeerlessPatcher.csproj \
             -c Release \
@@ -44,14 +73,11 @@ jobs:
       - name: Assemble AppDir
         run: |
           mkdir -p AppDir/usr/bin
-          mkdir -p AppDir/usr/lib
           mkdir -p AppDir/usr/share/applications
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
 
-          # Copy published output
           cp -r dist/linux-x64/* AppDir/usr/bin/
 
-          # Desktop entry
           cat > AppDir/usr/share/applications/PeerlessPatcher.desktop << 'EOF'
           [Desktop Entry]
           Name=Peerless Patcher
@@ -61,7 +87,6 @@ jobs:
           Categories=Utility;
           EOF
 
-          # Placeholder icon (1x1 transparent PNG) — replace with a real icon if desired
           printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x01\x00\x00\x00\x01\x00\x08\x06\x00\x00\x00\x5c\x72\xa8\x66\x00\x00\x00\x0bIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82' \
             > AppDir/usr/share/icons/hicolor/256x256/apps/PeerlessPatcher.png
 
@@ -69,18 +94,33 @@ jobs:
         run: |
           ./linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
-            --output appimage
-          mv SteamGamePatcher*.AppImage PeerlessPatcher-linux-x64.AppImage
+            --output appimage \
+            --no-deploy-deps
+          mv PeerlessPatcher*.AppImage PeerlessPatcher-linux-x64.AppImage
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: PeerlessPatcher-linux-x64
           path: PeerlessPatcher-linux-x64.AppImage
           if-no-files-found: error
 
-      - name: Upload to GitHub Release (on tag)
-        if: startsWith(github.ref, 'refs/tags/')
+  release:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: PeerlessPatcher-linux-x64.AppImage
+          tag_name: v0.${{ github.run_number }}
+          name: v0.${{ github.run_number }}
+          files: |
+            artifacts/PeerlessPatcher-windows-x64/PeerlessPatcher-windows-x64.zip
+            artifacts/PeerlessPatcher-linux-x64/PeerlessPatcher-linux-x64.AppImage
