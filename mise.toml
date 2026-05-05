@@ -55,7 +55,7 @@ mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hic
 
 cp -r dist/linux-x64/* AppDir/usr/bin/
 
-cat > AppDir/usr/share/applications/PeerlessPatcher.desktop <<'DESKTOP'
+cat > AppDir/PeerlessPatcher.desktop <<'DESKTOP'
 [Desktop Entry]
 Name=Peerless Patcher
 Exec=PeerlessPatcher
@@ -63,7 +63,9 @@ Icon=PeerlessPatcher
 Type=Application
 Categories=Utility;
 DESKTOP
+cp AppDir/PeerlessPatcher.desktop AppDir/usr/share/applications/PeerlessPatcher.desktop
 
+cp profiles/assets/icon.png AppDir/PeerlessPatcher.png
 cp profiles/assets/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/PeerlessPatcher.png
 
 cat > AppDir/AppRun <<'APPRUN'
