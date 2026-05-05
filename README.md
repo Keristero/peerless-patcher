@@ -2,7 +2,8 @@
 
 I wanted to play kingdom hearts 3 so I figured I'd use AI to help create a tool for applying the ultrawide patches easily.
 
-Applies and reverts game patches for Steam games. Useful for ultrawide fixes and other exe edits. Run it alongside your game and toggle patches on or off. Original files are always backed up and restorable.
+Applies and reverts game patches for Steam games. Useful for ultrawide fixes and other exe edits. Run it alongside your game and toggle patches on or off.
+But most patches wont apply while the game is running.
 
 ## Features
 
