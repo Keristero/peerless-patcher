@@ -8,99 +8,42 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Test
-        run: dotnet test src/PeerlessPatcher.Tests/PeerlessPatcher.Tests.csproj --configuration Release
-
-      - name: Publish
-        run: >
-          dotnet publish src/PeerlessPatcher/PeerlessPatcher.csproj
-          -c Release
-          -r win-x64
-          --self-contained true
-          -p:PublishSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
-          -o dist/win-x64
-
-      - name: Zip
-        run: Compress-Archive -Path dist/win-x64/* -DestinationPath PeerlessPatcher-windows-x64.zip
-        shell: pwsh
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: PeerlessPatcher-windows-x64
-          path: PeerlessPatcher-windows-x64.zip
-          if-no-files-found: error
-
-  build-linux:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+      - uses: jdx/mise-action@v2
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1 libx11-6 libxext6 fuse
+          sudo apt-get install -y fuse zip
 
       - name: Test
-        run: dotnet test src/PeerlessPatcher.Tests/PeerlessPatcher.Tests.csproj --configuration Release
+        run: mise run test
 
-      - name: Publish
-        run: |
-          dotnet publish src/PeerlessPatcher/PeerlessPatcher.csproj \
-            -c Release \
-            -r linux-x64 \
-            --self-contained true \
-            -o dist/linux-x64
+      - name: Package Linux AppImage
+        run: mise run package:linux
 
-      - name: Assemble AppDir
-        run: |
-          mkdir -p AppDir/usr/bin
-          mkdir -p AppDir/usr/share/applications
-          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
-
-          cp -r dist/linux-x64/* AppDir/usr/bin/
-
-          printf '[Desktop Entry]\nName=Peerless Patcher\nExec=PeerlessPatcher\nIcon=PeerlessPatcher\nType=Application\nCategories=Utility;\n' \
-            > AppDir/usr/share/applications/PeerlessPatcher.desktop
-
-          printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x01\x00\x00\x00\x01\x00\x08\x06\x00\x00\x00\x5c\x72\xa8\x66\x00\x00\x00\x0bIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82' \
-            > AppDir/usr/share/icons/hicolor/256x256/apps/PeerlessPatcher.png
-
-          printf '#!/bin/bash\nHERE="$(dirname "$(readlink -f "${0}")")"\nexport LD_LIBRARY_PATH="${HERE}/usr/bin:${LD_LIBRARY_PATH}"\nexec "${HERE}/usr/bin/PeerlessPatcher" "$@"\n' \
-            > AppDir/AppRun
-          chmod +x AppDir/AppRun
-
-      - name: Download appimagetool
-        run: |
-          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
-          chmod +x appimagetool-x86_64.AppImage
-
-      - name: Build AppImage
-        run: |
-          ARCH=x86_64 ./appimagetool-x86_64.AppImage AppDir PeerlessPatcher-linux-x64.AppImage
+      - name: Package Windows zip
+        run: mise run package:windows
 
       - uses: actions/upload-artifact@v4
         with:
           name: PeerlessPatcher-linux-x64
-          path: PeerlessPatcher-linux-x64.AppImage
+          path: dist/PeerlessPatcher-linux-x64.AppImage
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PeerlessPatcher-windows-x64
+          path: dist/PeerlessPatcher-windows-x64.zip
           if-no-files-found: error
 
   release:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: [build-windows, build-linux]
+    needs: [build]
     runs-on: ubuntu-latest
     permissions:
       contents: write

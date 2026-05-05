@@ -6,8 +6,8 @@ description = "Build self-contained Linux x64 binary"
 run = "dotnet publish src/PeerlessPatcher/PeerlessPatcher.csproj -c Release -r linux-x64 --self-contained true -o dist/linux-x64"
 
 [tasks."build:windows"]
-description = "Build self-contained Windows x64 executable (cross-compile friendly)"
-run = "dotnet publish src/PeerlessPatcher/PeerlessPatcher.csproj -c Release -r win-x64 --self-contained true -o dist/win-x64"
+description = "Build self-contained Windows x64 single-file executable (cross-compiles from Linux)"
+run = "dotnet publish src/PeerlessPatcher/PeerlessPatcher.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o dist/win-x64"
 
 [tasks."build:debug"]
 description = "Build debug linux-x64 binary (used by the run task)"
@@ -37,3 +37,60 @@ run = "dotnet test src/PeerlessPatcher.Tests/PeerlessPatcher.Tests.csproj"
 [tasks."test:integration"]
 description = "Run unit tests + UI integration tests (requires a display; Linux only)"
 run = "SGPATCHER_INTEGRATION_TESTS=1 dotnet test src/PeerlessPatcher.Tests/PeerlessPatcher.Tests.csproj"
+
+[tasks."package:windows"]
+description = "Zip Windows build into dist/PeerlessPatcher-windows-x64.zip"
+depends = ["build:windows"]
+run = "(cd dist/win-x64 && zip -r ../PeerlessPatcher-windows-x64.zip .)"
+
+[tasks."package:linux"]
+description = "Build Linux AppImage into dist/PeerlessPatcher-linux-x64.AppImage"
+depends = ["build:linux"]
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+rm -rf AppDir
+mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
+
+cp -r dist/linux-x64/* AppDir/usr/bin/
+
+cat > AppDir/usr/share/applications/PeerlessPatcher.desktop <<'DESKTOP'
+[Desktop Entry]
+Name=Peerless Patcher
+Exec=PeerlessPatcher
+Icon=PeerlessPatcher
+Type=Application
+Categories=Utility;
+DESKTOP
+
+python3 <<'PYEOF'
+import struct, zlib, pathlib
+
+def chunk(tag, data):
+    crc = zlib.crc32(tag + data) & 0xffffffff
+    return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", crc)
+
+sig = bytes([137, 80, 78, 71, 13, 10, 26, 10])
+ihdr = chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0))
+idat = chunk(b"IDAT", zlib.compress(bytes([0, 0, 0, 0])))
+iend = chunk(b"IEND", b"")
+pathlib.Path("AppDir/usr/share/icons/hicolor/256x256/apps/PeerlessPatcher.png").write_bytes(sig + ihdr + idat + iend)
+PYEOF
+
+cat > AppDir/AppRun <<'APPRUN'
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "$0")")"
+export LD_LIBRARY_PATH="$HERE/usr/bin:$LD_LIBRARY_PATH"
+exec "$HERE/usr/bin/PeerlessPatcher" "$@"
+APPRUN
+chmod +x AppDir/AppRun
+
+if [ ! -f appimagetool-x86_64.AppImage ]; then
+  wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+  chmod +x appimagetool-x86_64.AppImage
+fi
+
+mkdir -p dist
+ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 ./appimagetool-x86_64.AppImage AppDir dist/PeerlessPatcher-linux-x64.AppImage
+'''
