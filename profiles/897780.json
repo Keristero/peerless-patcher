@@ -1,0 +1,53 @@
+{
+  "gameId": "kingdom-hearts-3",
+  "gameName": "Kingdom Hearts III",
+  "steamAppId": 897780,
+  "installDir": "KINGDOM HEARTS III",
+  "processName": "KINGDOM HEARTS III",
+  "patches": [
+    {
+      "type": "file-hex-edit",
+      "name": "Ultrawide Aspect Ratio",
+      "description": "Replaces all 7 hardcoded 16:9 aspect-ratio float constants with your configured screen ratio. Covers splash screens, intro cutscenes, gameplay cameras, title screen, menus, HUD, and loading screens. Apply before launching the game.",
+      "filePath": "KINGDOM HEARTS III/Binaries/Win64/KINGDOM HEARTS III.exe",
+      "aspectRatioReplace": true,
+      "sites": [
+        {
+          "offset": 15443243,
+          "findBytes": [57, 142, 227, 63],
+          "notes": "Code immediate — mov [reg+0x428], 1.7778f. Camera/viewport initialization in .text. Required for gameplay camera bars; also affects intro cutscenes."
+        },
+        {
+          "offset": 97816768,
+          "findBytes": [57, 142, 227, 63],
+          "notes": "Data table entry in .rdata at 0x05D490C0. Read at runtime by both the gameplay camera system and splash/boot renderer. Required for gameplay bars to disappear."
+        },
+        {
+          "offset": 66723163,
+          "findBytes": [59, 142, 227, 63],
+          "notes": "Code immediate — mov [rax+0x428], 1.7778f at 0x03FA1D5B. First of three aspect-ratio writes in the same camera-setup function block."
+        },
+        {
+          "offset": 66723240,
+          "findBytes": [59, 142, 227, 63],
+          "notes": "Code immediate — mov [rdi+0x408], 1.7778f at 0x03FA1DA8. Second write in same camera-setup function; different field offset (+0x408 vs +0x428)."
+        },
+        {
+          "offset": 66728466,
+          "findBytes": [59, 142, 227, 63],
+          "notes": "Code immediate — mov [rbx+0x428], 1.7778f at 0x03FA3212. Third write in the same camera-setup function block, different object."
+        },
+        {
+          "offset": 71440794,
+          "findBytes": [50, 142, 227, 63],
+          "notes": "Code immediate — mov [rdi+0x408], 1.7777f at 0x0442199A. Gameplay camera initialization path; writes same field (+0x408) as B2 but from a separate code site."
+        },
+        {
+          "offset": 106329544,
+          "findBytes": [172, 139, 227, 63],
+          "notes": "Data section entry at 0x065675C8 (1.7777f variant). Controls the viewport constraint used by menus, HUD, title screen, and loading screens. Alone it does not fix gameplay bars."
+        }
+      ]
+    }
+  ]
+}

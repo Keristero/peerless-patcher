@@ -1,0 +1,25 @@
+# Build outputs
+bin/
+obj/
+dist/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docobj
+
+# Rider
+.idea/
+
+# VS Code
+.vscode/
+
+# NuGet
+*.nupkg
+packages/
+*.lock.json
+!packages.lock.json
+
+# Logs
+*.log
