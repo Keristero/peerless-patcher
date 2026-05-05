@@ -64,19 +64,7 @@ Type=Application
 Categories=Utility;
 DESKTOP
 
-python3 <<'PYEOF'
-import struct, zlib, pathlib
-
-def chunk(tag, data):
-    crc = zlib.crc32(tag + data) & 0xffffffff
-    return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", crc)
-
-sig = bytes([137, 80, 78, 71, 13, 10, 26, 10])
-ihdr = chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0))
-idat = chunk(b"IDAT", zlib.compress(bytes([0, 0, 0, 0])))
-iend = chunk(b"IEND", b"")
-pathlib.Path("AppDir/usr/share/icons/hicolor/256x256/apps/PeerlessPatcher.png").write_bytes(sig + ihdr + idat + iend)
-PYEOF
+cp profiles/assets/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/PeerlessPatcher.png
 
 cat > AppDir/AppRun <<'APPRUN'
 #!/bin/bash
