@@ -1,42 +1,34 @@
 # Peerless Patcher
 
-A lightweight C# desktop application that applies and reverts game patches — including
-ultrawide hex edits — to Steam games. Run it alongside your game, toggle patches on or off,
-and your original files are always fully restorable.
+Applies and reverts game patches for Steam games. Useful for ultrawide fixes and other exe edits. Run it alongside your game and toggle patches on or off. Original files are always backed up and restorable.
 
 ## Features
 
-- **File hex patching** (`file-hex-edit`) — patches a game executable or data file on disk; fully reversible
-- **File replacement** (`file-replace`) — replaces a game file with a bundled asset; original backed up and restored on revert
-- **In-process hex patching** (`hex-edit`) — writes bytes to process memory; auto-reverts when the game exits
-- Declarative JSON profiles — add support for a new game by dropping a JSON file, no recompile needed
-- Screen resolution settings persisted per-machine — patches adapt to your actual aspect ratio
-- Manual install path override for non-default Steam library locations
+- `file-hex-edit` - patches a game exe or data file on disk, reversible
+- `file-replace` - swaps a game file with a bundled asset, backs up the original
+- `hex-edit` - writes bytes to process memory, reverts automatically when the game exits
+- JSON profiles - add a new game by dropping a JSON file, no recompile needed
+- Screen resolution saved per machine, patches adapt to your aspect ratio
+- Manual install path override if Steam auto-detection fails
 
 ## Bundled Profiles
 
 | Game | Steam App ID | Patch |
 |------|-------------|-------|
-| Kingdom Hearts III | 897780 | Ultrawide aspect ratio (patches 7 hardcoded 16:9 constants in the exe) |
-
----
+| Kingdom Hearts III | 897780 | Ultrawide aspect ratio (7 hardcoded 16:9 constants in the exe) |
 
 ## Downloads
 
-Pre-built binaries are produced by CI on every push to `main` and for every `v*` tag release.
+Builds are produced by CI on every push to `main` and on `v*` tag releases.
 
 | Platform | Download |
 |----------|---------|
 | Windows x64 | `PeerlessPatcher-windows-x64.zip` from [Releases](../../releases) |
 | Linux x64 | `PeerlessPatcher-linux-x64.AppImage` from [Releases](../../releases) |
 
----
-
 ## Running
 
-**Windows:**
-1. Extract the zip and run `PeerlessPatcher.exe`.  
-   Administrator is only needed for `hex-edit` (live memory) patches — file patches work without it unless the game folder is write-protected.
+**Windows:** extract the zip and run `PeerlessPatcher.exe`. Administrator is only needed for `hex-edit` (live memory) patches.
 
 **Linux:**
 ```bash
@@ -44,53 +36,35 @@ chmod +x PeerlessPatcher-linux-x64.AppImage
 ./PeerlessPatcher-linux-x64.AppImage
 ```
 
-**Usage:**
 1. Open the patcher.
-2. Toggle patches on in the **Patches** tab.
+2. Toggle patches on in the Patches tab.
 3. Launch your game.
-4. To revert, toggle patches off and close the patcher.
+4. To revert, toggle patches off.
 
-> File patches modify the executable on disk. If Steam runs **Verify file integrity**, it will revert the patched files — just re-apply them in the patcher.
+Note: if Steam runs Verify File Integrity, it will revert any patched files. Just re-apply them.
 
----
+## Dev Setup
 
-## Environment Setup (for development)
-
-This project uses [mise-en-place](https://mise.jdx.dev/) to pin the .NET SDK version.
+Uses [mise](https://mise.jdx.dev/) to pin the .NET SDK version.
 
 ```bash
-# Install mise (Linux/macOS)
 curl https://mise.run | sh
-
 git clone https://github.com/youruser/peerless-patcher
 cd peerless-patcher
-mise trust && mise install   # installs .NET SDK 8.0.420
+mise trust && mise install
 ```
-
----
 
 ## Building
 
 ```bash
-# Windows exe (cross-compiles from Linux too)
-mise run build:windows
-# → dist/win-x64/
-
-# Linux binary
-mise run build:linux
-# → dist/linux-x64/
-
-# Run tests
+mise run build:windows   # dist/win-x64/
+mise run build:linux     # dist/linux-x64/
 mise run test
 ```
 
----
+## Adding a Game Profile
 
-## Adding a New Game Profile
-
-See [`profiles/README.md`](profiles/README.md) for the full JSON schema.
-
-Quick example:
+See [`profiles/README.md`](profiles/README.md) for the full schema.
 
 ```json
 // profiles/<steamAppId>.json
@@ -114,22 +88,19 @@ Quick example:
 }
 ```
 
-Drop the file in `profiles/` next to the executable — the patcher picks it up on next launch.
+Drop the file in `profiles/` next to the executable and restart the patcher.
 
----
-
-## Patch Types Reference
+## Patch Types
 
 | Type | Target | Reversible | Notes |
 |------|--------|------------|-------|
-| `file-hex-edit` | File on disk | Yes (toggle off) | Scans whole file if `offset: -1`; supports multiple named sites |
-| `file-replace` | File on disk | Yes (toggle off) | Backs up original as `<file>.sgp.bak` |
-| `hex-edit` | Process memory (live) | Auto on process exit | Requires Admin on Windows |
+| `file-hex-edit` | File on disk | Yes | Scans whole file if `offset: -1` |
+| `file-replace` | File on disk | Yes | Backs up original as `<file>.sgp.bak` |
+| `hex-edit` | Process memory | Auto on exit | Requires Admin on Windows |
 
----
+## Notes
 
-## Known Limitations
+- Steam Verify File Integrity will revert file patches. Re-apply after a game update.
+- `hex-edit` requires Administrator on Windows.
+- On Linux/Proton, `hex-edit` needs `ptrace` access. `file-hex-edit` works without elevated privileges.
 
-- File patches modify the executable on disk — **Steam's Verify File Integrity will revert them**. Re-apply after a game update.
-- In-process `hex-edit` requires Administrator on Windows.
-- Linux/Proton support for in-process `hex-edit` patching requires `ptrace` access (`sudo` or a permissive `kernel.yama.ptrace_scope`); `file-hex-edit` works without elevated privileges.
