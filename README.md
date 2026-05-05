@@ -22,6 +22,8 @@ But most patches wont apply while the game is running.
 | Game | Steam App ID | Patch |
 |------|-------------|-------|
 | Kingdom Hearts III | 897780 | Ultrawide aspect ratio (7 hardcoded 16:9 constants in the exe) |
+| Kingdom Hearts HD 1.5+2.5 ReMIX — KH2 Final Mix | 2552430 | Ultrawide aspect ratio (1 constant in the display-mode data table) |
+| Kingdom Hearts HD 1.5+2.5 ReMIX — KH1 Final Mix | 2552430 | Ultrawide aspect ratio (1 constant in the display-mode data table) |
 
 ## Downloads
 

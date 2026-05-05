@@ -1,0 +1,37 @@
+{
+  "gameId": "kingdom-hearts-hd-1-5-2-5-remix",
+  "gameName": "KINGDOM HEARTS HD 1.5+2.5 ReMIX",
+  "steamAppId": 2552430,
+  "installDir": "KINGDOM HEARTS -HD 1.5+2.5 ReMIX-",
+  "processName": "KINGDOM HEARTS II FINAL MIX",
+  "patches": [
+    {
+      "type": "file-hex-edit",
+      "name": "KH2FM Ultrawide Aspect Ratio",
+      "description": "Replaces the hardcoded 16:9 aspect ratio float in KINGDOM HEARTS II FINAL MIX.exe with your configured screen ratio. The float lives in a display-mode data table (alongside supported resolution heights 720/900/1080/1440/1920/2160/3840) and is the only occurrence of the 16:9 constant in the exe. Apply before launching the game.",
+      "filePath": "KINGDOM HEARTS II FINAL MIX.exe",
+      "aspectRatioReplace": true,
+      "sites": [
+        {
+          "offset": 6278664,
+          "findBytes": [172, 139, 227, 63],
+          "notes": "Data table entry at 0x005FCE08. The float 1.7777 (AC 8B E3 3F) is the only 16:9 constant in the exe. Followed immediately by resolution height values: 720, 900, 1080, 1440, 1920, 2160, 3840."
+        }
+      ]
+    },
+    {
+      "type": "file-hex-edit",
+      "name": "KH1FM Ultrawide Aspect Ratio",
+      "description": "Replaces the hardcoded 16:9 aspect ratio float in KINGDOM HEARTS FINAL MIX.exe with your configured screen ratio. Same single-site structure as the KH2FM patch. Apply before launching the game.",
+      "filePath": "KINGDOM HEARTS FINAL MIX.exe",
+      "aspectRatioReplace": true,
+      "sites": [
+        {
+          "offset": 4061984,
+          "findBytes": [172, 139, 227, 63],
+          "notes": "Data table entry at 0x003DFB20. The float 1.7777 (AC 8B E3 3F) is the only 16:9 constant in the exe. Same resolution table structure as KH2FM."
+        }
+      ]
+    }
+  ]
+}
