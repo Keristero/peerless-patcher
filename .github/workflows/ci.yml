@@ -79,24 +79,24 @@ jobs:
           cp -r dist/linux-x64/* AppDir/usr/bin/
 
           cat > AppDir/usr/share/applications/PeerlessPatcher.desktop << 'EOF'
-          [Desktop Entry]
-          Name=Peerless Patcher
-          Exec=PeerlessPatcher
-          Icon=PeerlessPatcher
-          Type=Application
-          Categories=Utility;
-          EOF
+[Desktop Entry]
+Name=Peerless Patcher
+Exec=PeerlessPatcher
+Icon=PeerlessPatcher
+Type=Application
+Categories=Utility;
+EOF
 
           printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x01\x00\x00\x00\x01\x00\x08\x06\x00\x00\x00\x5c\x72\xa8\x66\x00\x00\x00\x0bIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82' \
             > AppDir/usr/share/icons/hicolor/256x256/apps/PeerlessPatcher.png
 
           # AppRun script - sets library path so .NET finds its own bundled libs
           cat > AppDir/AppRun << 'EOF'
-          #!/bin/bash
-          HERE="$(dirname "$(readlink -f "${0}")")"
-          export LD_LIBRARY_PATH="${HERE}/usr/bin:${LD_LIBRARY_PATH}"
-          exec "${HERE}/usr/bin/PeerlessPatcher" "$@"
-          EOF
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "${0}")")"
+export LD_LIBRARY_PATH="${HERE}/usr/bin:${LD_LIBRARY_PATH}"
+exec "${HERE}/usr/bin/PeerlessPatcher" "$@"
+EOF
           chmod +x AppDir/AppRun
 
       - name: Download appimagetool
