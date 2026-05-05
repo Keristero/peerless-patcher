@@ -167,12 +167,14 @@ public sealed class GameDetector : IDisposable
     /// <summary>
     /// Returns true if <paramref name="proc"/> matches <paramref name="profile"/>.
     /// Handles two Linux/Proton quirks:
-    /// 1. The kernel truncates process names to 15 chars in /proc/pid/status — so
-    ///    "KINGDOM HEARTS III" (18 chars) appears as "KINGDOM HEARTS I". We match
-    ///    if the profile name starts with the process name (prefix match).
-    /// 2. Wine/Proton games run as wine64-preloader with the exe in the cmdline.
+    /// 1. Wine/Proton games run as wine64-preloader with the exe in the cmdline.
     ///    We read /proc/pid/cmdline and check if any argument contains the profile
     ///    process name (case-insensitive, .exe optional).
+    /// 2. The kernel truncates process names to 15 chars in /proc/pid/status — so
+    ///    "KINGDOM HEARTS III" (18 chars) appears as "KINGDOM HEARTS I". We use this
+    ///    as a last resort only when cmdline cannot be read, to avoid false positives
+    ///    when two games share the same 15-char prefix (e.g. "KINGDOM HEARTS II FINAL MIX"
+    ///    and "KINGDOM HEARTS III" both truncate to "KINGDOM HEARTS ").
     /// </summary>
     private static bool MatchesProfile(Process proc, string procName, PatchProfile profile)
     {
@@ -180,24 +182,26 @@ public sealed class GameDetector : IDisposable
         if (string.Equals(procName, profile.ProcessName, StringComparison.OrdinalIgnoreCase))
             return true;
 
-        // Linux: kernel truncates to 15 chars. Match if profile name starts with procName.
-        if (OperatingSystem.IsLinux() &&
-            profile.ProcessName.Length > 15 &&
-            profile.ProcessName.StartsWith(procName, StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        // Linux/Proton: wine64-preloader has the exe path in cmdline.
         if (OperatingSystem.IsLinux())
         {
+            // Linux/Proton: wine64-preloader stores the full exe path in cmdline.
+            // Check this first — it gives the untruncated name and is authoritative.
+            // If cmdline is readable, return definitively (true or false) without
+            // falling through to the imprecise prefix match below.
             try
             {
                 var cmdline = File.ReadAllText($"/proc/{proc.Id}/cmdline")
                     .Replace('\0', ' ').Trim();
-                // Match if cmdline contains the profile process name (with or without .exe)
                 return cmdline.Contains(profile.ProcessName, StringComparison.OrdinalIgnoreCase) ||
                        cmdline.Contains(profile.ProcessName + ".exe", StringComparison.OrdinalIgnoreCase);
             }
-            catch { /* /proc may not be readable */ }
+            catch { /* /proc not readable — fall through to prefix match */ }
+
+            // Last resort: kernel truncates to 15 chars. Match if the profile name
+            // starts with the (truncated) proc name. Only reached when cmdline is unreadable.
+            if (profile.ProcessName.Length > 15 &&
+                profile.ProcessName.StartsWith(procName, StringComparison.OrdinalIgnoreCase))
+                return true;
         }
 
         return false;
