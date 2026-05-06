@@ -3,10 +3,44 @@
 ![Screenshot A](screenshot_a.png)
 ![Screenshot B](screenshot_b.png)
 
-I wanted to play kingdom hearts 3 so I figured I'd use AI to help create a tool for applying the ultrawide patches easily.
+I wanted to play the steam kingdom hearts games in ultrawide, but I was dissatisfied with how hard it is to patch them.
 
-Applies and reverts game patches for Steam games. Useful for ultrawide fixes and other exe edits. Run it alongside your game and toggle patches on or off.
-But most patches wont apply while the game is running.
+This tool will automatically find your steam installs for kingdom hearts games, allowing you to enable and disable ultrawide patches with a single click
+
+It might work with the epic games store versions too, but I have not tested it - and you would likely need to configure the path to the install manually
+
+### What this is
+- A really easy way to install basic ultrawide fixes that remove black bars for gameplay
+- A generic patching tool with some built in patches from the pc gaming wiki
+  - There are a few small improvements over the patches I found there, like scaling the viewport seperately from the UI in kingdom hearts BBS
+
+### What this is not
+- A handcrafted high quality tool
+  - I heavily used AI to speed up the development of this tool, it might not work on your machine, if it does not - open a report and I'll try fix it ASAP. I would not have had time to develop this without AI - developing this using AI was easier for me than installing the patches manually.
+- A replacement for something like (KH-ReFined)[https://github.com/KH-ReFined/KH-ReFined]
+  - ReFined is an awesome project that will hoepfully make this tool redundant in the future as it enables true aspect ratio + FOV modifications for any screen size (and much much more)
+  - ReFined is already by far the best way to play Kingdom Hearts 2 in ultrawide
+
+# Usage
+1. Open the peerless patcher
+2. Enable the patches you want
+3. Launch the games and play them
+
+# Usage (b)
+If the game paths were not detected, try launching the games with the patcher open before you try to apply the patches, the paths should be auto detected.
+- try patch them after this, you will need to restart the game
+
+# Usage (c)
+If the game paths are not auto detected, go to the paths tab and manually point the tool to your install folders, for example on linux this might look like:
+`/run/media/system/Samsung980Pro/SteamLibrary/steamapps/common/KINGDOM HEARTS -HD 1.5+2.5 ReMIX-`
+- hit apply then try patch them after this
+
+# Known bugs
+- Sometimes I have to go to the paths tab and hit apply on the paths before the patches will be detected as applied on startup.
+
+# Report bugs
+- If none of the above worked, add a issue to the github and if I have time i'll try fix it.
+
 
 ## Features
 
@@ -44,9 +78,7 @@ Builds are produced by CI on every push to `main` and on `v*` tag releases.
 
 ## Credits
 
-Thanks to the KH community for their combined efforts, I pulled most of the hex editing information from the PC Gaming Wiki and KH-ReFined
-Claude Sonnet 4.6 did the rest
-
+Thanks to the KH community for their combined efforts, I pulled most of the hex editing information from the PC Gaming Wiki
 
 ## Running
 
