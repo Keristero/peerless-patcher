@@ -175,6 +175,9 @@ public sealed class GameDetector : IDisposable
     ///    as a last resort only when cmdline cannot be read, to avoid false positives
     ///    when two games share the same 15-char prefix (e.g. "KINGDOM HEARTS II FINAL MIX"
     ///    and "KINGDOM HEARTS III" both truncate to "KINGDOM HEARTS ").
+    /// 3. Newer Proton builds (wine64-preloader) blank both the process name and
+    ///    cmdline entirely. In this case we fall back to scanning /proc/pid/maps for
+    ///    a mapping whose path contains the profile's process name.
     /// </summary>
     private static bool MatchesProfile(Process proc, string procName, PatchProfile profile)
     {
@@ -186,20 +189,43 @@ public sealed class GameDetector : IDisposable
         {
             // Linux/Proton: wine64-preloader stores the full exe path in cmdline.
             // Check this first — it gives the untruncated name and is authoritative.
-            // If cmdline is readable, return definitively (true or false) without
-            // falling through to the imprecise prefix match below.
+            // If cmdline is readable and non-empty, return definitively (true or false)
+            // without falling through to the imprecise checks below.
             try
             {
                 var cmdline = File.ReadAllText($"/proc/{proc.Id}/cmdline")
                     .Replace('\0', ' ').Trim();
-                return cmdline.Contains(profile.ProcessName, StringComparison.OrdinalIgnoreCase) ||
-                       cmdline.Contains(profile.ProcessName + ".exe", StringComparison.OrdinalIgnoreCase);
+                if (!string.IsNullOrWhiteSpace(cmdline))
+                {
+                    return cmdline.Contains(profile.ProcessName, StringComparison.OrdinalIgnoreCase) ||
+                           cmdline.Contains(profile.ProcessName + ".exe", StringComparison.OrdinalIgnoreCase);
+                }
             }
-            catch { /* /proc not readable — fall through to prefix match */ }
+            catch { /* /proc not readable — fall through */ }
+
+            // Newer Proton builds (wine64-preloader) blank both name and cmdline.
+            // Fall back to /proc/pid/maps: if the profile's exe is mapped in this
+            // process's address space it must be running that game.
+            try
+            {
+                var mapsExeName = profile.ProcessName + ".exe";
+                foreach (var line in File.ReadLines($"/proc/{proc.Id}/maps"))
+                {
+                    // Each line ends with the file path (or nothing for anonymous)
+                    var slash = line.LastIndexOf('/');
+                    if (slash < 0) continue;
+                    var mappedFile = line[(slash + 1)..];
+                    if (mappedFile.Equals(mapsExeName, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+            }
+            catch { /* /proc/pid/maps not readable */ }
 
             // Last resort: kernel truncates to 15 chars. Match if the profile name
             // starts with the (truncated) proc name. Only reached when cmdline is unreadable.
-            if (profile.ProcessName.Length > 15 &&
+            // Guard: procName must be non-empty — a blank name matches every StartsWith.
+            if (!string.IsNullOrEmpty(procName) &&
+                profile.ProcessName.Length > 15 &&
                 profile.ProcessName.StartsWith(procName, StringComparison.OrdinalIgnoreCase))
                 return true;
         }

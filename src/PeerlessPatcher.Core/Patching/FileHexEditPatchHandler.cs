@@ -37,6 +37,76 @@ public sealed class FileHexEditPatchHandler : IPatchHandler
     public PatchResult Revert(PatchContext context, PatchEntry entry) =>
         Patch(context, entry, applyDirection: false);
 
+    public PatchResult Probe(PatchContext context, PatchEntry entry)
+    {
+        if (string.IsNullOrWhiteSpace(entry.FilePath))
+            return new PatchResult(PatchResultStatus.Error, "file-hex-edit patch is missing the 'filePath' field.");
+
+        if (string.IsNullOrWhiteSpace(context.GameInstallPath))
+            return new PatchResult(PatchResultStatus.Error, "Game install path could not be determined.");
+
+        var fullPath = Path.Combine(context.GameInstallPath, entry.FilePath);
+        if (!File.Exists(fullPath))
+            return new PatchResult(PatchResultStatus.Error, $"Target file not found: {fullPath}");
+
+        byte[] fileBytes;
+        try { fileBytes = File.ReadAllBytes(fullPath); }
+        catch (Exception ex) { return new PatchResult(PatchResultStatus.Error, $"Failed to read '{entry.FilePath}': {ex.Message}"); }
+
+        byte[] effectiveReplaceBytes = ComputeReplaceBytes(entry, context);
+
+        // ── Sites mode ────────────────────────────────────────────────────────
+        if (entry.Sites is { Count: > 0 })
+        {
+            int patchedCount = 0, unpatchedCount = 0;
+            for (int i = 0; i < entry.Sites.Count; i++)
+            {
+                var site = entry.Sites[i];
+                byte[] siteReplaceBytes = site.AspectRatioReplace
+                    ? BitConverter.GetBytes((float)context.ScreenWidth / context.ScreenHeight)
+                    : site.FovDenominatorReplace
+                        ? BitConverter.GetBytes(16.0f * context.ScreenHeight / context.ScreenWidth)
+                        : site.ReplaceBytes ?? effectiveReplaceBytes;
+                byte[] siteFindBytes = site.FindBytes ?? entry.FindBytes ?? [];
+
+                if (site.Offset < 0 || site.Offset + siteFindBytes.Length > fileBytes.Length)
+                    return new PatchResult(PatchResultStatus.Error, $"Site {i} offset 0x{site.Offset:X} is out of bounds.");
+
+                var atOffset = fileBytes[(int)site.Offset..(int)(site.Offset + siteFindBytes.Length)];
+                if (atOffset.SequenceEqual(siteReplaceBytes))
+                    patchedCount++;
+                else if (atOffset.SequenceEqual(siteFindBytes))
+                    unpatchedCount++;
+                else
+                    return new PatchResult(PatchResultStatus.SignatureNotFound,
+                        $"Site {i} at 0x{site.Offset:X}: bytes don't match original or patched state — game version may differ.");
+            }
+
+            if (patchedCount == entry.Sites.Count) return new PatchResult(PatchResultStatus.AlreadyPatched);
+            if (unpatchedCount == entry.Sites.Count) return new PatchResult(PatchResultStatus.AlreadyUnpatched);
+            // Partially applied — treat as unpatched so user can apply cleanly
+            return new PatchResult(PatchResultStatus.AlreadyUnpatched);
+        }
+
+        // ── Patch-all / single mode ───────────────────────────────────────────
+        if (entry.FindBytes is null) return new PatchResult(PatchResultStatus.Error, "Patch entry is missing findBytes.");
+
+        bool foundPatched   = FindPattern(fileBytes, effectiveReplaceBytes) != -1;
+        bool foundUnpatched = FindPattern(fileBytes, entry.FindBytes) != -1;
+
+        if (foundPatched && !foundUnpatched) return new PatchResult(PatchResultStatus.AlreadyPatched);
+        if (foundUnpatched) return new PatchResult(PatchResultStatus.AlreadyUnpatched);
+        return new PatchResult(PatchResultStatus.SignatureNotFound, $"Byte pattern not found in '{entry.FilePath}'.");
+    }
+
+    /// <summary>Computes the patch-level replacement bytes from formula flags or static data.</summary>
+    private static byte[] ComputeReplaceBytes(PatchEntry entry, PatchContext context) =>
+        entry.AspectRatioReplace
+            ? BitConverter.GetBytes((float)context.ScreenWidth / context.ScreenHeight)
+            : entry.FovDenominatorReplace
+                ? BitConverter.GetBytes(16.0f * context.ScreenHeight / context.ScreenWidth)
+                : (entry.ReplaceBytes ?? []);
+
     // ── Core logic ────────────────────────────────────────────────────────────
 
     private PatchResult Patch(PatchContext context, PatchEntry entry, bool applyDirection)
@@ -59,10 +129,8 @@ public sealed class FileHexEditPatchHandler : IPatchHandler
             return new PatchResult(PatchResultStatus.Error, $"Target file not found: {fullPath}");
 
         // Compute the effective replace bytes — either from the profile directly,
-        // or derived from the user's configured screen resolution (width ÷ height as float).
-        byte[] effectiveReplaceBytes = entry.AspectRatioReplace
-            ? BitConverter.GetBytes((float)context.ScreenWidth / context.ScreenHeight)
-            : (entry.ReplaceBytes ?? []);
+        // or derived from the user's configured screen resolution.
+        byte[] effectiveReplaceBytes = ComputeReplaceBytes(entry, context);
 
         // When applying we look for findBytes; when reverting we look for replaceBytes.
         // (Not used in sites mode, but kept for patchAll / single modes below.)
@@ -85,15 +153,27 @@ public sealed class FileHexEditPatchHandler : IPatchHandler
         // the exact offset, regardless of what other patches have done elsewhere.
         if (entry.Sites is { Count: > 0 })
         {
-            if (!entry.AspectRatioReplace && entry.ReplaceBytes is null)
+            // Each site may declare its own formula flag; fall back to patch-level flags.
+            // A site (or the patch) must have replaceBytes or a formula flag.
+            bool patchHasReplacement = entry.AspectRatioReplace || entry.FovDenominatorReplace || entry.ReplaceBytes is not null;
+            bool allSitesHaveOwnReplacement = entry.Sites.All(
+                s => s.AspectRatioReplace || s.FovDenominatorReplace || s.ReplaceBytes is not null);
+            if (!patchHasReplacement && !allSitesHaveOwnReplacement)
                 return new PatchResult(PatchResultStatus.Error, "Multi-site patch is missing 'replaceBytes'.");
 
             int applied = 0, skipped = 0;
             for (int i = 0; i < entry.Sites.Count; i++)
             {
                 var site = entry.Sites[i];
-                byte[] siteFindBytes  = applyDirection ? (site.FindBytes ?? entry.FindBytes!) : effectiveReplaceBytes;
-                byte[] siteWriteBytes = applyDirection ? effectiveReplaceBytes : (site.FindBytes ?? entry.FindBytes!);
+
+                // Compute this site's replacement bytes: site flags > site.ReplaceBytes > patch flags > static replaceBytes.
+                byte[] siteEffectiveReplaceBytes =
+                    site.AspectRatioReplace  ? BitConverter.GetBytes((float)context.ScreenWidth / context.ScreenHeight) :
+                    site.FovDenominatorReplace ? BitConverter.GetBytes(16.0f * context.ScreenHeight / context.ScreenWidth) :
+                    site.ReplaceBytes ?? effectiveReplaceBytes;
+
+                byte[] siteFindBytes  = applyDirection ? (site.FindBytes ?? entry.FindBytes!) : siteEffectiveReplaceBytes;
+                byte[] siteWriteBytes = applyDirection ? siteEffectiveReplaceBytes : (site.FindBytes ?? entry.FindBytes!);
 
                 if (site.Offset < 0 || site.Offset + siteFindBytes.Length > fileBytes.Length)
                     return new PatchResult(PatchResultStatus.Error,

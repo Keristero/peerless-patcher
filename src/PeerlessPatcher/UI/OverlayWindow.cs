@@ -144,6 +144,23 @@ public sealed class OverlayWindow : IDisposable
         _selectedGameId ??= profile.GameId;
     }
 
+    /// <summary>
+    /// Syncs patch toggle states from disk by using probe results. Called after an install
+    /// path is resolved so the UI correctly reflects the current state of the game files.
+    /// </summary>
+    public void SyncPatchStatesFromDisk(string gameId, IEnumerable<(PatchEntry Entry, PatchResultStatus Status)> probeResults)
+    {
+        if (!_profileStates.TryGetValue(gameId, out var state)) return;
+        foreach (var (entry, status) in probeResults)
+        {
+            if (status == PatchResultStatus.AlreadyPatched)
+                state.PatchStates[entry] = true;
+            else if (status == PatchResultStatus.AlreadyUnpatched)
+                state.PatchStates[entry] = false;
+            // Unsupported / SignatureNotFound / Error — leave state as-is
+        }
+    }
+
     /// <summary>Called when the game process starts. Marks the profile as running and selects it in the UI.</summary>
     public void OnGameDetected(PatchProfile profile, int _processId)
     {
@@ -283,7 +300,9 @@ public sealed class OverlayWindow : IDisposable
 
         // ── Header ────────────────────────────────────────────────────────────
         ImGui.SetCursorPosX(12);
-        ImGui.TextColored(new Vector4(1, 1, 1, 1), "Peerless Patcher");
+        var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        var verStr = ver is null ? string.Empty : $" v{ver.Major}.{ver.Minor}.{ver.Build}";
+        ImGui.TextColored(new Vector4(1, 1, 1, 1), $"Peerless Patcher{verStr}");
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();

@@ -17,13 +17,21 @@ But most patches wont apply while the game is running.
 - Screen resolution saved per machine, patches adapt to your aspect ratio
 - Manual install path override if Steam auto-detection fails
 
+## Status
+- I've only tested the first few minutes of gameplay in every game, if you have any issues report them in issues or something, try to include as much detail as you can, as well as what platform you are on.
+- I've only tested on bazzite linux using proton, with 3440x1440 patches so far, it should work for other screen aspect ratios also, but im not sure.
+- KH2FM, KH1FM, Re:CoM: two-site patches (AR float + FOV denominator). BBS uses a shadow-constant redirect technique to patch projection without affecting UI bounds.
+
+
 ## Bundled Profiles
 
 | Game | Steam App ID | Patch |
 |------|-------------|-------|
 | Kingdom Hearts III | 897780 | Ultrawide aspect ratio (7 hardcoded 16:9 constants in the exe) |
-| Kingdom Hearts HD 1.5+2.5 ReMIX — KH2 Final Mix | 2552430 | Ultrawide aspect ratio (1 constant in the display-mode data table) |
-| Kingdom Hearts HD 1.5+2.5 ReMIX — KH1 Final Mix | 2552430 | Ultrawide aspect ratio (1 constant in the display-mode data table) |
+| Kingdom Hearts HD 1.5+2.5 ReMIX — KH2 Final Mix | 2552430 | Ultrawide fix: AR float + FOV denominator (two-site patch) |
+| Kingdom Hearts HD 1.5+2.5 ReMIX — KH1 Final Mix | 2552430 | Ultrawide fix: AR float + FOV denominator (two-site patch) |
+| Kingdom Hearts HD 1.5+2.5 ReMIX — Re:Chain of Memories | 2552430 | Ultrawide fix: AR float + FOV denominator (two-site patch) |
+| Kingdom Hearts HD 1.5+2.5 ReMIX — Birth by Sleep | 2552430 | Ultrawide fix: shadow-constant redirect (seven-site patch, UI preserved) |
 
 ## Downloads
 
@@ -33,6 +41,12 @@ Builds are produced by CI on every push to `main` and on `v*` tag releases.
 |----------|---------|
 | Windows x64 | `PeerlessPatcher-windows-x64.zip` from [Releases](../../releases) |
 | Linux x64 | `PeerlessPatcher-linux-x64.AppImage` from [Releases](../../releases) |
+
+## Credits
+
+Thanks to the KH community for their combined efforts, I pulled most of the hex editing information from the PC Gaming Wiki and KH-ReFined
+Claude Sonnet 4.6 did the rest
+
 
 ## Running
 
@@ -72,7 +86,7 @@ mise run test
 
 ## Adding a Game Profile
 
-See [`profiles/README.md`](profiles/README.md) for the full schema.
+See [`profiles/README.md`](profiles/README.md) for the full schema. For advanced cases where a single constant is shared between 3D projection and UI code, see [`profiles/assets/shadow-constant-redirect.md`](profiles/assets/shadow-constant-redirect.md).
 
 ```json
 // profiles/<steamAppId>.json

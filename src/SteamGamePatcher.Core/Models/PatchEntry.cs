@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace PeerlessPatcher.Models;
+namespace SteamGamePatcher.Models;
 
 /// <summary>
 /// One explicitly-addressed site within a multi-site patch.
@@ -16,28 +16,6 @@ public sealed class PatchSite
     /// <summary>Original bytes expected at <see cref="Offset"/> (used to apply and revert).</summary>
     [JsonPropertyName("findBytes")]
     public byte[]? FindBytes { get; init; }
-
-    /// <summary>
-    /// When <c>true</c>, this site's replacement bytes are computed as <c>screenWidth / screenHeight</c>.
-    /// Overrides any patch-level <see cref="PatchEntry.AspectRatioReplace"/> for this specific site.
-    /// </summary>
-    [JsonPropertyName("aspectRatioReplace")]
-    public bool AspectRatioReplace { get; init; }
-
-    /// <summary>
-    /// When <c>true</c>, this site's replacement bytes are computed as <c>16.0f × screenHeight / screenWidth</c>.
-    /// Overrides any patch-level <see cref="PatchEntry.FovDenominatorReplace"/> for this specific site.
-    /// </summary>
-    [JsonPropertyName("fovDenominatorReplace")]
-    public bool FovDenominatorReplace { get; init; }
-
-    /// <summary>
-    /// Explicit replacement bytes for this site.
-    /// Takes precedence over patch-level <see cref="PatchEntry.ReplaceBytes"/> when set,
-    /// but is overridden by <see cref="AspectRatioReplace"/> or <see cref="FovDenominatorReplace"/>.
-    /// </summary>
-    [JsonPropertyName("replaceBytes")]
-    public byte[]? ReplaceBytes { get; init; }
 
     /// <summary>Human-readable note describing what this site controls (ignored at runtime).</summary>
     [JsonPropertyName("notes")]

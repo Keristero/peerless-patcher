@@ -10,6 +10,9 @@ public sealed class HexEditPatchHandler : IPatchHandler
 {
     public string HandledType => "hex-edit";
 
+    public PatchResult Probe(PatchContext context, PatchEntry entry) =>
+        new PatchResult(PatchResultStatus.Unsupported);
+
     public PatchResult Apply(PatchContext context, PatchEntry entry)
     {
         var memory = context.ProcessMemory;

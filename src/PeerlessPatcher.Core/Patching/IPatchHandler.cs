@@ -25,4 +25,13 @@ public interface IPatchHandler
 
     PatchResult Apply(PatchContext context, PatchEntry entry);
     PatchResult Revert(PatchContext context, PatchEntry entry);
+
+    /// <summary>
+    /// Checks whether the patch is currently applied without modifying anything.
+    /// Returns <see cref="PatchResultStatus.AlreadyPatched"/> if applied,
+    /// <see cref="PatchResultStatus.AlreadyUnpatched"/> if not applied,
+    /// or <see cref="PatchResultStatus.SignatureNotFound"/>/<see cref="PatchResultStatus.Error"/>
+    /// if the state cannot be determined.
+    /// </summary>
+    PatchResult Probe(PatchContext context, PatchEntry entry);
 }

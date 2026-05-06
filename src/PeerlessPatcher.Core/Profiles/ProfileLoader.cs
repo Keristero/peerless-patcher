@@ -147,9 +147,11 @@ public sealed class ProfileLoader
 
             if (hasSites)
             {
-                // Sites mode: each site carries its own findBytes; top-level replaceBytes is required
-                // unless aspectRatioReplace is set (bytes are computed at runtime from screen resolution).
-                if (!entry.AspectRatioReplace && entry.ReplaceBytes is null)
+                // Sites mode: each site may have its own formula flag; otherwise falls back to patch-level.
+                // At least one of: patch replaceBytes, patch formula flag, or per-site formula flags must cover all sites.
+                bool patchHasReplacement = entry.AspectRatioReplace || entry.FovDenominatorReplace || entry.ReplaceBytes is not null;
+                bool allSitesHaveOwnReplacement = entry.Sites!.All(s => s.AspectRatioReplace || s.FovDenominatorReplace || s.ReplaceBytes is not null);
+                if (!patchHasReplacement && !allSitesHaveOwnReplacement)
                 {
                     _logger.LogError(
                         "File-hex-edit patch '{Name}' in '{File}' uses sites mode but is missing replaceBytes, skipping.",
@@ -157,13 +159,10 @@ public sealed class ProfileLoader
                     return false;
                 }
 
-                // For aspectRatioReplace the computed bytes are always 4 (float), use that as expected length.
-                int expectedReplaceLen = entry.AspectRatioReplace ? 4 : entry.ReplaceBytes!.Length;
-
                 for (int i = 0; i < entry.Sites!.Count; i++)
                 {
                     var site = entry.Sites[i];
-                    var siteFindBytes = site.FindBytes ?? entry.FindBytes; // null-checked below
+                    var siteFindBytes = site.FindBytes ?? entry.FindBytes;
                     if (siteFindBytes is null)
                     {
                         _logger.LogError(
@@ -171,6 +170,12 @@ public sealed class ProfileLoader
                             entry.Name, fileName, i);
                         return false;
                     }
+
+                    // For runtime-computed replacements the bytes are always 4 (float).
+                    bool siteRuntimeReplace = site.AspectRatioReplace || site.FovDenominatorReplace
+                        || entry.AspectRatioReplace || entry.FovDenominatorReplace;
+                    int expectedReplaceLen = siteRuntimeReplace ? 4
+                        : (site.ReplaceBytes?.Length ?? entry.ReplaceBytes!.Length);
 
                     if (siteFindBytes.Length != expectedReplaceLen)
                     {

@@ -24,6 +24,8 @@ public sealed class FileReplacePatchHandler : IPatchHandler
 
     public PatchResult Apply(PatchContext context, PatchEntry entry) => Patch(context, entry, apply: true);
     public PatchResult Revert(PatchContext context, PatchEntry entry) => Patch(context, entry, apply: false);
+    public PatchResult Probe(PatchContext context, PatchEntry entry) =>
+        new PatchResult(PatchResultStatus.Unsupported);
 
     private PatchResult Patch(PatchContext context, PatchEntry entry, bool apply)
     {

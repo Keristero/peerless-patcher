@@ -107,6 +107,8 @@ public class HexEditPatchHandlerTests
             _contents = data;
         }
 
+        public IReadOnlyList<(long Start, long Length)> GetScanRegions() => [];
+
         public void Dispose() { }
     }
 }

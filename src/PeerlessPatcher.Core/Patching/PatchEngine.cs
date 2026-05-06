@@ -126,6 +126,21 @@ public sealed class PatchEngine : IDisposable
     public PatchResult Apply(PatchEntry entry) => Dispatch(entry, isApply: true);
     public PatchResult Revert(PatchEntry entry) => Dispatch(entry, isApply: false);
 
+    /// <summary>
+    /// Checks whether the patch is currently applied without modifying anything.
+    /// Requires the engine to be attached (install path resolved).
+    /// </summary>
+    public PatchResult Probe(PatchEntry entry)
+    {
+        if (_context is null)
+            return new PatchResult(PatchResultStatus.Error, "Not attached to any game process.");
+
+        if (!_handlers.TryGetValue(entry.Type, out var handler))
+            return new PatchResult(PatchResultStatus.Unsupported, $"Unknown patch type: {entry.Type}");
+
+        return handler.Probe(_context, entry);
+    }
+
     private PatchResult Dispatch(PatchEntry entry, bool isApply)
     {
         if (_context is null)

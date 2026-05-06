@@ -7,29 +7,111 @@
   "patches": [
     {
       "type": "file-hex-edit",
-      "name": "KH2FM Ultrawide Aspect Ratio",
-      "description": "Replaces the hardcoded 16:9 aspect ratio float in KINGDOM HEARTS II FINAL MIX.exe with your configured screen ratio. The float lives in a display-mode data table (alongside supported resolution heights 720/900/1080/1440/1920/2160/3840) and is the only occurrence of the 16:9 constant in the exe. Apply before launching the game.",
+      "name": "KH2FM Ultrawide Fix",
+      "description": "Two-site fix for KH2FM ultrawide black bars. Site 1 replaces the hardcoded 16:9 aspect ratio float with your screen ratio. Site 2 replaces the hardcoded '9' in the 16:9 FOV denominator table with the correct value for your screen. Apply before launching the game.",
       "filePath": "KINGDOM HEARTS II FINAL MIX.exe",
-      "aspectRatioReplace": true,
       "sites": [
         {
           "offset": 6278664,
           "findBytes": [172, 139, 227, 63],
-          "notes": "Data table entry at 0x005FCE08. The float 1.7777 (AC 8B E3 3F) is the only 16:9 constant in the exe. Followed immediately by resolution height values: 720, 900, 1080, 1440, 1920, 2160, 3840."
+          "aspectRatioReplace": true,
+          "notes": "Aspect ratio float (1.7777) at 0x5FCE08. Replaced with screenWidth/screenHeight."
+        },
+        {
+          "offset": 5929148,
+          "findBytes": [0, 0, 16, 65],
+          "fovDenominatorReplace": true,
+          "notes": "FOV denominator float (9.0) at 0x5A78BC. Replaced with 16*screenHeight/screenWidth."
         }
       ]
     },
     {
       "type": "file-hex-edit",
       "name": "KH1FM Ultrawide Aspect Ratio",
-      "description": "Replaces the hardcoded 16:9 aspect ratio float in KINGDOM HEARTS FINAL MIX.exe with your configured screen ratio. Same single-site structure as the KH2FM patch. Apply before launching the game.",
+      "description": "Two-site fix for KH1FM ultrawide. Site 1 replaces the 16:9 aspect ratio float. Site 2 replaces the FOV denominator. Apply before launching the game.",
       "filePath": "KINGDOM HEARTS FINAL MIX.exe",
-      "aspectRatioReplace": true,
       "sites": [
         {
           "offset": 4061984,
           "findBytes": [172, 139, 227, 63],
-          "notes": "Data table entry at 0x003DFB20. The float 1.7777 (AC 8B E3 3F) is the only 16:9 constant in the exe. Same resolution table structure as KH2FM."
+          "aspectRatioReplace": true,
+          "notes": "Aspect ratio float (1.7777) at 0x3DFB20. Same resolution table structure as KH2FM."
+        },
+        {
+          "offset": 3873556,
+          "findBytes": [0, 0, 16, 65],
+          "fovDenominatorReplace": true,
+          "notes": "FOV denominator float (9.0) at 0x3B1B14. Part of table [0.0625, 9.0]."
+        }
+      ]
+    },
+    {
+      "type": "file-hex-edit",
+      "name": "Re:CoM Ultrawide Fix",
+      "description": "Two-site fix for Re:CoM ultrawide. Site 1 replaces the 16:9 aspect ratio float. Site 2 replaces the FOV denominator. Apply before launching the game.",
+      "filePath": "KINGDOM HEARTS Re_Chain of Memories.exe",
+      "sites": [
+        {
+          "offset": 6632096,
+          "findBytes": [172, 139, 227, 63],
+          "aspectRatioReplace": true,
+          "notes": "Aspect ratio float (1.7777) at 0x6532A0. Same resolution table structure as KH2FM."
+        },
+        {
+          "offset": 5273684,
+          "findBytes": [0, 0, 16, 65],
+          "fovDenominatorReplace": true,
+          "notes": "FOV denominator float (9.0) at 0x507854. Part of table [7.0, 9.0, 14.0, 17.0]."
+        }
+      ]
+    },
+    {
+      "type": "file-hex-edit",
+      "name": "BBS Ultrawide Fix",
+      "description": "Seven-site fix for BBS ultrawide using the shadow-constant redirect technique. Site 1 writes the patched FOV denominator (16*H/W) to an unused slot (0x6337BC) adjacent to the original 9.0 constant (0x6337B4). Sites 2-7 redirect six of the nine callers of 0x6337B4 to read from 0x6337BC instead — specifically the three mulss projection multiplies, one stack store, one subss, and one minss. The remaining three callers (two comiss bounds-checks and one xorps/load) are left reading the original 9.0, which preserves UI layout. Apply before launching the game.",
+      "filePath": "KINGDOM HEARTS Birth by Sleep FINAL MIX.exe",
+      "sites": [
+        {
+          "offset": 6502332,
+          "findBytes": [0, 0, 0, 0],
+          "fovDenominatorReplace": true,
+          "notes": "Shadow FOV constant at 0x6337BC. Receives 16*H/W. Original 9.0 at 0x6337B4 is untouched."
+        },
+        {
+          "offset": 2354479,
+          "findBytes": [129, 100, 63, 0],
+          "replaceBytes": [137, 100, 63, 0],
+          "notes": "Redirects movss xmm1,[rip] at 0x23ED2B → feeds mulss xmm0,xmm1 projection multiply."
+        },
+        {
+          "offset": 2441709,
+          "findBytes": [195, 15, 62, 0],
+          "replaceBytes": [203, 15, 62, 0],
+          "notes": "Redirects movss xmm1,[rip] at 0x2541E9 → stores FOV value to stack."
+        },
+        {
+          "offset": 2553386,
+          "findBytes": [134, 91, 60, 0],
+          "replaceBytes": [142, 91, 60, 0],
+          "notes": "Redirects movss xmm6,[rip] at 0x26F626 → subss xmm6,xmm0 (viewport calculation)."
+        },
+        {
+          "offset": 5129501,
+          "findBytes": [147, 12, 21, 0],
+          "replaceBytes": [155, 12, 21, 0],
+          "notes": "Redirects movss xmm4,[rip] at 0x4E4519 → minss clamp (viewport dimension clamp)."
+        },
+        {
+          "offset": 5163396,
+          "findBytes": [44, 136, 20, 0],
+          "replaceBytes": [52, 136, 20, 0],
+          "notes": "Redirects movss xmm4,[rip] at 0x4EC980 → mulss xmm2,xmm4 projection multiply."
+        },
+        {
+          "offset": 5166197,
+          "findBytes": [59, 125, 20, 0],
+          "replaceBytes": [67, 125, 20, 0],
+          "notes": "Redirects movss xmm4,[rip] at 0x4ED471 → mulss xmm2,xmm4 projection multiply."
         }
       ]
     }

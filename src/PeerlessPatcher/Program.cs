@@ -44,6 +44,7 @@ internal static class Program
         var patchEngine = new PatchEngine(
             [
                 new HexEditPatchHandler(),
+                new MemoryScanPatchHandler(),
                 new FileHexEditPatchHandler(loggerFactory.CreateLogger<FileHexEditPatchHandler>()),
                 new FileReplacePatchHandler(profilesDir, loggerFactory.CreateLogger<FileReplacePatchHandler>()),
             ],
@@ -94,6 +95,7 @@ internal static class Program
                 }
                 overlay.SetResolvedPath(profile.GameId, installPath,
                     isManual: pathOverrides.ContainsKey(profile.GameId));
+                ProbeAndSync(profile);
                 log.LogInformation("Found installed game: {Name} at {Path}", profile.GameName, installPath);
             }
             else
@@ -120,6 +122,7 @@ internal static class Program
                 // Also show the profile in the UI if it wasn't found before.
                 overlay.OnProfileLoaded(profile);
                 overlay.SetResolvedPath(gameId, newPath, isManual: true);
+                ProbeAndSync(profile);
             }
 
             log.LogInformation("Path override saved for {GameId}: {Path}", gameId, newPath);
@@ -207,8 +210,16 @@ internal static class Program
             }
 
             overlay.OnGameExited(e.Profile.GameId);
+            ProbeAndSync(e.Profile);
             log.LogInformation("Game exited: {Name}", e.Profile.GameName);
         };
+
+        // ── Local helper: probe all patches for a profile and sync UI state ────
+        void ProbeAndSync(PatchProfile profile)
+        {
+            var results = profile.Patches.Select(p => (p, patchEngine.Probe(p).Status));
+            overlay.SyncPatchStatesFromDisk(profile.GameId, results);
+        }
 
         detector.Start();
 
