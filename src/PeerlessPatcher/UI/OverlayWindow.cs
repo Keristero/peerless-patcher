@@ -5,6 +5,7 @@ using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
+using Silk.NET.Windowing.Glfw;
 using Silk.NET.Windowing.Sdl;
 using PeerlessPatcher.Models;
 using PeerlessPatcher.Patching;
@@ -82,12 +83,18 @@ public sealed class OverlayWindow : IDisposable
         _allProfiles = allProfiles ?? [];
         _patchEngine = patchEngine;
 
-        // Use SDL2 instead of GLFW — SDL2 has native Wayland support without libdecor.
-        // Force X11/XWayland driver: Wayland+EGL often fails in Flatpak/container
-        // environments (no EGL display). X11 works reliably via XWayland on modern desktops.
+        // Use SDL2 on Linux — has native Wayland support without libdecor.
+        // Force X11 driver to avoid EGL failures in Flatpak/container environments.
+        // Use GLFW on Windows — SDL2 native libraries are not bundled for Windows.
         if (OperatingSystem.IsLinux())
+        {
             Environment.SetEnvironmentVariable("SDL_VIDEODRIVER", "x11");
-        SdlWindowing.Use();
+            SdlWindowing.Use();
+        }
+        else
+        {
+            GlfwWindowing.Use();
+        }
 
         var opts = WindowOptions.Default with
         {
