@@ -18,7 +18,7 @@ It might work with the epic games store versions too, but I have not tested it -
 - A handcrafted high quality tool
   - I heavily used AI to speed up the development of this tool, it might not work on your machine, if it does not - open a report and I'll try fix it ASAP. I would not have had time to develop this without AI - developing this using AI was easier for me than installing the patches manually.
 - A replacement for something like (KH-ReFined)[https://github.com/KH-ReFined/KH-ReFined]
-  - ReFined is an awesome project that will hoepfully make this tool redundant in the future as it enables true aspect ratio + FOV modifications for any screen size (and much much more)
+  - ReFined is an awesome project that will hopefully make this tool redundant in the future as it enables true aspect ratio + FOV modifications for any screen size (and much much more)
   - ReFined is already by far the best way to play Kingdom Hearts 2 in ultrawide
 
 # Usage
