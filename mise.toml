@@ -6,8 +6,8 @@ description = "Build self-contained Linux x64 binary"
 run = "dotnet publish src/PeerlessPatcher/PeerlessPatcher.csproj -c Release -r linux-x64 --self-contained true -o dist/linux-x64"
 
 [tasks."build:windows"]
-description = "Build self-contained Windows x64 single-file executable (cross-compiles from Linux)"
-run = "dotnet publish src/PeerlessPatcher/PeerlessPatcher.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o dist/win-x64"
+description = "Build self-contained Windows x64 directory (cross-compiles from Linux)"
+run = "dotnet publish src/PeerlessPatcher/PeerlessPatcher.csproj -c Release -r win-x64 --self-contained true -o dist/win-x64"
 
 [tasks."build:debug"]
 description = "Build debug linux-x64 binary (used by the run task)"
