@@ -1,5 +1,17 @@
 # Peerless Patcher
 
+## Bundled Profiles
+
+| Preview | Game | Steam App ID | Status | Patch |
+|---------|------|-------------|--------|-------|
+| <img src="profiles/assets/897780/kh3.jpg" width="200"> | Kingdom Hearts III | 897780 | Working | Ultrawide without stretching UI |
+| <img src="profiles/assets/2552440/28.jpg" width="200"> | Kingdom Hearts HD 2.8 — 0.2 Birth by Sleep | 2552440 | Working | Ultrawide without stretching UI |
+| <img src="profiles/assets/2552440/ddd.jpg" width="200"> | Kingdom Hearts HD 2.8 — Dream Drop Distance | 2552440 | Working | Ultrawide without stretching UI |
+| <img src="profiles/assets/2552430/2.jpg" width="200"> | Kingdom Hearts HD 1.5+2.5 ReMIX — KH2 Final Mix | 2552430 | Working | Ultrawide without stretching UI |
+| <img src="profiles/assets/2552430/1.jpg" width="200"> | Kingdom Hearts HD 1.5+2.5 ReMIX — KH1 Final Mix | 2552430 | Working | Ultrawide, the UI appears to be unstretched ultrawide too! |
+| <img src="profiles/assets/2552430/recom.jpg" width="200"> | Kingdom Hearts HD 1.5+2.5 ReMIX — Re:Chain of Memories | 2552430 | Working | Ultrawide without stretching UI |
+| <img src="profiles/assets/2552430/bbs.jpg" width="200"> | Kingdom Hearts HD 1.5+2.5 ReMIX — Birth by Sleep | 2552430 | Working | Ultrawide without stretching UI |
+
 ![Screenshot A](screenshot_a.png)
 ![Screenshot B](screenshot_b.png)
 
@@ -55,19 +67,6 @@ If the game paths are not auto detected, go to the paths tab and manually point 
 ## Status
 - I've only tested the first few minutes of gameplay in every game, if you have any issues report them in issues or something, try to include as much detail as you can, as well as what platform you are on.
 - I've only tested on bazzite linux using proton, with 3440x1440 patches so far, it should work for other screen aspect ratios also, but im not sure.
-
-
-## Bundled Profiles
-
-| Preview | Game | Steam App ID | Status | Patch |
-|---------|------|-------------|--------|-------|
-| <img src="profiles/assets/897780/kh3.jpg" width="200"> | Kingdom Hearts III | 897780 | Working | Ultrawide without stretching UI |
-| <img src="profiles/assets/2552440/28.jpg" width="200"> | Kingdom Hearts HD 2.8 — 0.2 Birth by Sleep | 2552440 | Working | Ultrawide without stretching UI |
-| <img src="profiles/assets/2552440/ddd.jpg" width="200"> | Kingdom Hearts HD 2.8 — Dream Drop Distance | 2552440 | Working | Ultrawide without stretching UI |
-| <img src="profiles/assets/2552430/2.jpg" width="200"> | Kingdom Hearts HD 1.5+2.5 ReMIX — KH2 Final Mix | 2552430 | Working | Ultrawide without stretching UI |
-| <img src="profiles/assets/2552430/1.jpg" width="200"> | Kingdom Hearts HD 1.5+2.5 ReMIX — KH1 Final Mix | 2552430 | Working | Ultrawide, the UI appears to be unstretched ultrawide too! |
-| <img src="profiles/assets/2552430/recom.jpg" width="200"> | Kingdom Hearts HD 1.5+2.5 ReMIX — Re:Chain of Memories | 2552430 | Working | Ultrawide without stretching UI |
-| <img src="profiles/assets/2552430/bbs.jpg" width="200"> | Kingdom Hearts HD 1.5+2.5 ReMIX — Birth by Sleep | 2552430 | Working | Ultrawide without stretching UI |
 
 ## Downloads
 
