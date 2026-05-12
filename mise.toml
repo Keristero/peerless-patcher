@@ -1,5 +1,79 @@
 [tools]
 dotnet = "8.0.420"
+java = "21"
+
+[env]
+# Ghidra version to download if not already installed.
+# Matches the GitHub release tag: Ghidra_<GHIDRA_VERSION>_build
+GHIDRA_VERSION = "11.3.2"
+
+[tasks."setup:ghidra"]
+description = "Set up Ghidra for headless analysis — detects existing install or downloads from GitHub"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+TOOLS_DIR="${MISE_PROJECT_ROOT}/tools"
+LOCAL_HEADLESS="${TOOLS_DIR}/ghidra/support/analyzeHeadless"
+
+# 1. Already set up in tools/ghidra/
+if [ -x "${LOCAL_HEADLESS}" ]; then
+  echo "Ghidra already installed at: ${TOOLS_DIR}/ghidra"
+  echo "analyzeHeadless: ${LOCAL_HEADLESS}"
+  exit 0
+fi
+
+# 2. Available on system PATH
+if command -v analyzeHeadless &>/dev/null; then
+  echo "Ghidra found on system PATH: $(command -v analyzeHeadless)"
+  exit 0
+fi
+
+# 3. Download from GitHub releases
+echo "Ghidra not found — downloading version ${GHIDRA_VERSION} ..."
+TAG="Ghidra_${GHIDRA_VERSION}_build"
+API_URL="https://api.github.com/repos/NationalSecurityAgency/ghidra/releases/tags/${TAG}"
+
+DOWNLOAD_URL=$(python3 -c "
+import urllib.request, json, sys
+with urllib.request.urlopen('${API_URL}') as r:
+    data = json.load(r)
+for asset in data.get('assets', []):
+    name = asset['name']
+    if name.endswith('.zip') and 'PUBLIC' in name:
+        print(asset['browser_download_url'])
+        sys.exit(0)
+sys.exit(1)
+")
+
+if [ -z "${DOWNLOAD_URL}" ]; then
+  echo "ERROR: Could not find a PUBLIC zip asset in GitHub release ${TAG}" >&2
+  exit 1
+fi
+
+ZIP_NAME=$(basename "${DOWNLOAD_URL}")
+mkdir -p "${TOOLS_DIR}"
+echo "Downloading: ${DOWNLOAD_URL}"
+curl -L --progress-bar -o "${TOOLS_DIR}/${ZIP_NAME}" "${DOWNLOAD_URL}"
+
+echo "Extracting..."
+unzip -q "${TOOLS_DIR}/${ZIP_NAME}" -d "${TOOLS_DIR}/_ghidra_tmp"
+rm "${TOOLS_DIR}/${ZIP_NAME}"
+
+# The zip contains a top-level folder like ghidra_11.3.2_PUBLIC
+EXTRACTED=$(find "${TOOLS_DIR}/_ghidra_tmp" -mindepth 1 -maxdepth 1 -type d | head -1)
+mv "${EXTRACTED}" "${TOOLS_DIR}/ghidra"
+rmdir "${TOOLS_DIR}/_ghidra_tmp"
+
+chmod +x "${LOCAL_HEADLESS}"
+
+echo ""
+echo "Ghidra ${GHIDRA_VERSION} installed at: ${TOOLS_DIR}/ghidra"
+echo "analyzeHeadless: ${LOCAL_HEADLESS}"
+echo ""
+echo "TIP: Create a projects directory for analysis output:"
+echo "  mkdir -p ${MISE_PROJECT_ROOT}/tools/ghidra-projects"
+'''
 
 [tasks."build:linux"]
 description = "Build self-contained Linux x64 binary"

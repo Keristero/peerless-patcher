@@ -648,6 +648,11 @@ public sealed class OverlayWindow : IDisposable
             return;
         }
 
+        // File-hex-edit patches only need a valid install path, not a running process.
+        // Ensure the engine is pointed at this profile's resolved path before dispatching.
+        if (!string.IsNullOrEmpty(state.InstallPath))
+            _patchEngine.SetInstallPath(state.InstallPath);
+
         // Normal immediate apply/revert
         PatchResult result;
         try

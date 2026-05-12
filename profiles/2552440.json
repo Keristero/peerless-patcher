@@ -1,0 +1,2791 @@
+{
+  "gameId": "kingdom-hearts-hd-2-8-final-chapter-prologue",
+  "gameName": "KINGDOM HEARTS HD 2.8 Final Chapter Prologue",
+  "steamAppId": 2552440,
+  "installDir": "KINGDOM HEARTS HD 2.8 Final Chapter Prologue",
+  "processName": "KINGDOM HEARTS Dream Drop Distance",
+  "patches": [
+    {
+      "type": "file-hex-edit",
+      "name": "DDD Ultrawide Fix",
+      "description": "Six-site fix for DDD ultrawide using the shadow-constant redirect technique. Site 1 writes the patched FOV denominator (16*H/W) to an unused slot (0x1407855b0) adjacent to the original 9.0 constant (0x1407855b8). Sites 2-6 redirect five of the twenty callers of 0x1407855b8 to read from the shadow slot \u2014 specifically the two mulss projection multiplies and one minss clamp at the 0x65xxxx cluster (primary camera path), plus two more mulss multiplies at the 0x30xxxx cluster (secondary camera path). The remaining fifteen callers (two comiss bounds-checks, three xorps/grid-tile calculations, six divss-pattern callers of unclear purpose, and four deferred-load integer-op callers) are left reading the original 9.0. Apply before launching the game.",
+      "filePath": "KINGDOM HEARTS Dream Drop Distance.exe",
+      "sites": [
+        {
+          "offset": 7879600,
+          "findBytes": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "fovDenominatorReplace": true,
+          "notes": "Shadow FOV constant at 0x1407855b0 (foff=0x783bb0). Receives 16*H/W. Original 9.0 at 0x1407855b8 (foff=0x783bb8) is untouched. Shadow slot is the 4-byte zero immediately preceding the data table entry for 3.09375."
+        },
+        {
+          "offset": 6628749,
+          "findBytes": [
+            39,
+            36,
+            19,
+            0
+          ],
+          "replaceBytes": [
+            31,
+            36,
+            19,
+            0
+          ],
+          "notes": "Redirects movss xmm4,[rip] at VA=0x140653189 (foff=0x652589) \u2192 feeds minss xmm4,[rdx+0x28] viewport clamp. Displacement field at foff=0x65258d."
+        },
+        {
+          "offset": 6662644,
+          "findBytes": [
+            192,
+            159,
+            18,
+            0
+          ],
+          "replaceBytes": [
+            184,
+            159,
+            18,
+            0
+          ],
+          "notes": "Redirects movss xmm4,[rip] at VA=0x14065b5f0 (foff=0x65a9f0) \u2192 feeds mulss xmm2,xmm4 projection multiply. xmm4 also used later in divss xmm0,xmm4 in same branch \u2014 both ops use the redirected value consistently. Displacement field at foff=0x65a9f4."
+        },
+        {
+          "offset": 6665445,
+          "findBytes": [
+            207,
+            148,
+            18,
+            0
+          ],
+          "replaceBytes": [
+            199,
+            148,
+            18,
+            0
+          ],
+          "notes": "Redirects movss xmm4,[rip] at VA=0x14065c0e1 (foff=0x65b4e1) \u2192 feeds mulss xmm2,xmm4 projection multiply. xmm4 also used in divss xmm0,xmm4 in same branch \u2014 both ops use the redirected value consistently. Displacement field at foff=0x65b4e5."
+        },
+        {
+          "offset": 3195574,
+          "findBytes": [
+            254,
+            134,
+            71,
+            0
+          ],
+          "replaceBytes": [
+            246,
+            134,
+            71,
+            0
+          ],
+          "notes": "Redirects movss xmm3,[rip] at VA=0x14030ceb2 (foff=0x30c2b2) \u2192 feeds mulss xmm0,xmm3 projection multiply (secondary camera path). xmm3 is loaded early then used after movaps/movsd setup. Displacement field at foff=0x30c2b6."
+        },
+        {
+          "offset": 3330678,
+          "findBytes": [
+            62,
+            119,
+            69,
+            0
+          ],
+          "replaceBytes": [
+            54,
+            119,
+            69,
+            0
+          ],
+          "notes": "Redirects movss xmm3,[rip] at VA=0x14032de72 (foff=0x32d272) \u2192 feeds mulss xmm0,xmm3 projection multiply (secondary camera path, parallel to site 5 with different struct offset +0x270 vs +0x268). Displacement field at foff=0x32d276."
+        }
+      ]
+    },
+    {
+      "type": "file-hex-edit",
+      "name": "0.2 Ultrawide Aspect Ratio",
+      "description": "Comprehensive ultrawide fix for A Fragmentary Passage (0.2). Sites 1-2 patch the 1.7777 and 1.7778 aspect ratio constants in-place. Sites 3-25 patch test-form bConstrainAspectRatio branches (test byte [reg+0x94],1 \u2192 jne/je) across the 3D rendering path (0x01f7-0x0203xxxx). Sites 26-28 patch CMP-form bConstrainAspectRatio branches (cmp byte [reg+0x94],0 \u2192 je) in the viewport letterbox setup function (0x004fxxxx): forcing je\u2192jmp/jmp_near bypasses the constrained 3D viewport origin and dimension calculations, targeting the black bars in the 3D scene. Apply before launching the game.",
+      "filePath": "KINGDOM HEARTS 0.2 Birth by Sleep/Binaries/Win64/KINGDOM HEARTS 0.2 Birth by Sleep.exe",
+      "sites": [
+        {
+          "offset": 58270588,
+          "findBytes": [
+            172,
+            139,
+            227,
+            63
+          ],
+          "aspectRatioReplace": true,
+          "notes": "1.7777 float at foff=0x0379237c (VA 0x14379337c). Four movss callers load this into xmm5/xmm6/xmm7 for viewport/camera aspect ratio setup and vtable dispatch."
+        },
+        {
+          "offset": 56852132,
+          "findBytes": [
+            57,
+            142,
+            227,
+            63
+          ],
+          "aspectRatioReplace": true,
+          "notes": "1.7778 float at foff=0x03637ea4 (VA 0x143638ea4). Five mulss callers multiply by this value and immediately cvttss2si \u2014 computing 3D viewport pixel dimensions from height * aspect_ratio."
+        },
+        {
+          "offset": 55416550,
+          "findBytes": [
+            116,
+            69
+          ],
+          "replaceBytes": [
+            235,
+            69
+          ],
+          "notes": "Changes je\u2192jmp at foff=0x034d96e6 \u2014 exploratory patch targeting flag at [rsi+0x3c]. Harmless no-op for the 3D viewport constraint."
+        },
+        {
+          "offset": 33748371,
+          "findBytes": [
+            117,
+            92,
+            15,
+            16
+          ],
+          "replaceBytes": [
+            144,
+            144,
+            15,
+            16
+          ],
+          "notes": "NOPs jne at foff=0x0202f593 (VA 0x1402fffff3). test byte [rax+0x94],1 \u2192 jne +0x5c skips to a movsd that loads the constrained 16:9 constant; fall-through loads the full viewport rect from [rcx+0x2b0] via movups. NOP forces the unconstrained path. Part of bConstrainAspectRatio fix."
+        },
+        {
+          "offset": 33749636,
+          "findBytes": [
+            117,
+            96,
+            15,
+            16
+          ],
+          "replaceBytes": [
+            144,
+            144,
+            15,
+            16
+          ],
+          "notes": "NOPs jne at foff=0x0202fa84 (VA 0x140203484). Same pattern as site above \u2014 test [rax+0x94],1; jne to constrained constant; fall-through loads full rect from [rcx+0x2b0]. Different call site, same function logic."
+        },
+        {
+          "offset": 33784404,
+          "findBytes": [
+            117,
+            98,
+            15,
+            16
+          ],
+          "replaceBytes": [
+            144,
+            144,
+            15,
+            16
+          ],
+          "notes": "NOPs jne at foff=0x02038254 (VA 0x140203e54). Same bConstrainAspectRatio pattern using rdx+0x2b0 as the full-rect source, r8 as destination struct."
+        },
+        {
+          "offset": 33786228,
+          "findBytes": [
+            117,
+            94,
+            15,
+            16
+          ],
+          "replaceBytes": [
+            144,
+            144,
+            15,
+            16
+          ],
+          "notes": "NOPs jne at foff=0x02038974 (VA 0x140204574). Fourth instance of bConstrainAspectRatio check \u2014 same pattern, rdx+0x2b0 source."
+        },
+        {
+          "offset": 33029055,
+          "findBytes": [
+            117,
+            61,
+            65,
+            15
+          ],
+          "replaceBytes": [
+            144,
+            144,
+            65,
+            15
+          ],
+          "notes": "NOPs jne at foff=0x01f7fbbf (VA 0x141f805bf). Fifth bConstrainAspectRatio check \u2014 in a DIFFERENT function from NOPs 1-4 (0x01f7xxxx range). test [rax+0x94],1; jne +0x3d skips to a movaps block (4\u00d7 movaps xmm,[rip+const]; movups [r12+0x360-0x390],xmm) that loads hardcoded 16:9 rdata constants. Fall-through (unconstrained) loads movups xmm0,[r13+0x1f0] \u2014 the actual viewport rect from a SceneView/ViewInfo struct \u2014 and stores to [r12+0x360]. Pattern is identical to NOPs 1-4 but in the 0x01f7xxxx rendering path. NOP forces unconstrained viewport rect for 3D rendering."
+        },
+        {
+          "offset": 33044060,
+          "findBytes": [
+            15,
+            133,
+            160,
+            0,
+            0,
+            0,
+            243,
+            15
+          ],
+          "replaceBytes": [
+            144,
+            144,
+            144,
+            144,
+            144,
+            144,
+            243,
+            15
+          ],
+          "notes": "NOPs jne_near at foff=0x01f8365c (VA 0x141f84065). After test [rcx+0x94],1; jne_near +0xa0 jumps to constrained path which adds a screen-space centering offset (addss xmm0,[r9+0x90]) \u2014 the letterbox-centering translation for 16:9 within a wider framebuffer. Unconstrained fall-through does full matrix multiply (mulss xmm2,[r9+0x90]; mulss xmm0,[r9+0x80]; ...) for correct widescreen 3D projection. This is a 3D point-transform function. NOP forces full-screen projection."
+        },
+        {
+          "offset": 33045447,
+          "findBytes": [
+            15,
+            133,
+            160,
+            0,
+            0,
+            0,
+            243,
+            15
+          ],
+          "replaceBytes": [
+            144,
+            144,
+            144,
+            144,
+            144,
+            144,
+            243,
+            15
+          ],
+          "notes": "NOPs jne_near at foff=0x01f83bc7 (VA 0x141f845c7). Identical pattern to site above \u2014 same test [rcx+0x94],1; jne_near +0xa0; same constrained centering-offset path vs unconstrained matrix-multiply path. A parallel 3D point-transform function (different vtable slot or overload). NOP forces full-screen projection."
+        },
+        {
+          "offset": 33066805,
+          "findBytes": [
+            15,
+            133,
+            19,
+            1,
+            0,
+            0,
+            139,
+            69
+          ],
+          "replaceBytes": [
+            144,
+            144,
+            144,
+            144,
+            144,
+            144,
+            139,
+            69
+          ],
+          "notes": "NOPs jne_near at foff=0x01f88f35 (VA 0x141f8993f). test [rax+0x94],1; jne_near +0x113 jumps to constrained path (movsd from [rbp+0x00] \u2014 copies a cached constrained double). Unconstrained fall-through computes full viewport subss/addss with [rax+0x38/0x34/0x30] offsets and calls a sub-routine. Context shows this function already handles a bConstrainAspectRatio==2 case with a separate movsd just above. NOP forces unconstrained full-viewport path."
+        },
+        {
+          "offset": 32992491,
+          "findBytes": [
+            117,
+            21,
+            242,
+            15
+          ],
+          "replaceBytes": [
+            144,
+            144,
+            242,
+            15
+          ],
+          "notes": "NOPs jne at foff=0x01f76ceb (jne +21). test [rcx+0x94],1 \u2192 jne +21; earlier in 0x01f7xxxx range than NOP-5. NOP forces unconstrained fall-through."
+        },
+        {
+          "offset": 33018280,
+          "findBytes": [
+            117,
+            116,
+            72,
+            139
+          ],
+          "replaceBytes": [
+            144,
+            144,
+            72,
+            139
+          ],
+          "notes": "NOPs jne at foff=0x01f7d1a8 (jne +116). test [rax+0x94],1 \u2192 jne +116; 0x01f7xxxx range, adjacent to NOP-5. NOP forces unconstrained fall-through."
+        },
+        {
+          "offset": 33044514,
+          "findBytes": [
+            116,
+            26,
+            242,
+            15
+          ],
+          "replaceBytes": [
+            235,
+            26,
+            242,
+            15
+          ],
+          "notes": "je\u2192jmp at foff=0x01f83822 (je +26). In 0x01f8xxxx range, sits between 3D-projection NOP-A (0x01f83655) and NOP-B (0x01f83bc0). je is taken when unconstrained (flag=0); forcing jmp ensures the unconstrained path is always taken. Follows jne_nears A/B in the same 3D point-transform function cluster."
+        },
+        {
+          "offset": 33079468,
+          "findBytes": [
+            116,
+            31,
+            199,
+            68
+          ],
+          "replaceBytes": [
+            235,
+            31,
+            199,
+            68
+          ],
+          "notes": "je\u2192jmp at foff=0x01f8c0ac (je +31). In 0x01f8xxxx range (site D). test [rdi+0x94],1 \u2192 je +31 jumps to unconstrained path when flag=0; forcing jmp ensures unconstrained path always. Same 3D projection cluster as NOPs A-C."
+        },
+        {
+          "offset": 33079709,
+          "findBytes": [
+            116,
+            42,
+            15,
+            16
+          ],
+          "replaceBytes": [
+            235,
+            42,
+            15,
+            16
+          ],
+          "notes": "je\u2192jmp at foff=0x01f8c19d (je +42). In 0x01f8xxxx range (site E). test [rax+0x94],1 \u2192 je +42 jumps to unconstrained path when flag=0; forcing jmp ensures unconstrained path always."
+        },
+        {
+          "offset": 33080816,
+          "findBytes": [
+            116,
+            51,
+            15,
+            16
+          ],
+          "replaceBytes": [
+            235,
+            51,
+            15,
+            16
+          ],
+          "notes": "je\u2192jmp at foff=0x01f8c5f0 (je +51). In 0x01f8xxxx range (site F). test [rax+0x94],1 \u2192 je +51 jumps to unconstrained path when flag=0; forcing jmp ensures unconstrained path always."
+        },
+        {
+          "offset": 33329650,
+          "findBytes": [
+            15,
+            132,
+            208,
+            1,
+            0,
+            0,
+            72,
+            139
+          ],
+          "replaceBytes": [
+            15,
+            133,
+            208,
+            1,
+            0,
+            0,
+            72,
+            139
+          ],
+          "notes": "je_near\u2192jne_near at foff=0x01fc91f2 (je_near +0x1d0). In 0x01fcxxxx range (site G). je_near is taken when unconstrained (flag=0). Flipping to jne_near makes the branch trigger when flag=1 (constrained), so ultrawide users always reach the unconstrained rendering path."
+        },
+        {
+          "offset": 33451287,
+          "findBytes": [
+            117,
+            115,
+            72,
+            133
+          ],
+          "replaceBytes": [
+            144,
+            144,
+            72,
+            133
+          ],
+          "notes": "NOPs jne at foff=0x01fe6d17 (jne +115). In 0x01fexxxx range. test [rax+0x94],1 \u2192 jne +115 jumps to constrained path when flag=1. NOP forces unconstrained fall-through."
+        },
+        {
+          "offset": 33471465,
+          "findBytes": [
+            117,
+            103,
+            72,
+            139
+          ],
+          "replaceBytes": [
+            144,
+            144,
+            72,
+            139
+          ],
+          "notes": "NOPs jne at foff=0x01febbe9 (jne +103). In 0x01fexxxx range ('jne+103 near 5th NOP area'). test [rax+0x94],1 \u2192 jne +103 jumps to constrained path. NOP forces unconstrained fall-through."
+        },
+        {
+          "offset": 33749489,
+          "findBytes": [
+            116,
+            45,
+            77,
+            139
+          ],
+          "replaceBytes": [
+            235,
+            45,
+            77,
+            139
+          ],
+          "notes": "je\u2192jmp at foff=0x0202f9f1 (je +45). In 0x0202xxxx range near NOP-1 (0x0202f593) and NOP-2 (0x0202fa84). je is taken when unconstrained (flag=0); forcing jmp ensures unconstrained path always taken."
+        },
+        {
+          "offset": 33751281,
+          "findBytes": [
+            116,
+            46,
+            77,
+            139
+          ],
+          "replaceBytes": [
+            235,
+            46,
+            77,
+            139
+          ],
+          "notes": "je\u2192jmp at foff=0x020300f1 (je +46). In 0x0202xxxx range, second je variant paired with NOP-1/2. Same function, inverted branch logic."
+        },
+        {
+          "offset": 33766045,
+          "findBytes": [
+            15,
+            133,
+            137,
+            0,
+            0,
+            0,
+            243,
+            15
+          ],
+          "replaceBytes": [
+            144,
+            144,
+            144,
+            144,
+            144,
+            144,
+            243,
+            15
+          ],
+          "notes": "NOPs jne_near at foff=0x02033a9d (jne_near +0x89). In 0x0203xxxx range between NOP-3 (0x02038254) and NOP-4 (0x02038974). test [rax+0x94],1 \u2192 jne_near +0x89 skips to constrained path. NOP forces unconstrained fall-through."
+        },
+        {
+          "offset": 33785964,
+          "findBytes": [
+            116,
+            60,
+            76,
+            139
+          ],
+          "replaceBytes": [
+            235,
+            60,
+            76,
+            139
+          ],
+          "notes": "je\u2192jmp at foff=0x0203886c (je +60). In 0x0203xxxx range near NOP-3 (0x02038254). je is taken when unconstrained (flag=0); forcing jmp ensures unconstrained path always."
+        },
+        {
+          "offset": 33787601,
+          "findBytes": [
+            116,
+            59,
+            76,
+            139
+          ],
+          "replaceBytes": [
+            235,
+            59,
+            76,
+            139
+          ],
+          "notes": "je\u2192jmp at foff=0x02038ed1 (je +59). In 0x0203xxxx range near NOP-4 (0x02038974). je is taken when unconstrained (flag=0); forcing jmp ensures unconstrained path always."
+        },
+        {
+          "offset": 5233391,
+          "findBytes": [
+            128,
+            187,
+            148,
+            0,
+            0,
+            0,
+            0,
+            116,
+            60
+          ],
+          "replaceBytes": [
+            128,
+            187,
+            148,
+            0,
+            0,
+            0,
+            0,
+            235,
+            60
+          ],
+          "notes": "je\u2192jmp at foff=0x004fdaef (je +60). CMP-form bConstrainAspectRatio check: cmp byte [rbx+0x94],0 \u2192 je +60 fires when NOT constrained (flag=0). Fall-through (constrained path) loads [rbx+0x98] and calls constrained viewport dimension calculation. Change je\u2192jmp forces unconstrained path always \u2014 skips the constrained viewport setup so 3D scene renders full-width."
+        },
+        {
+          "offset": 5233660,
+          "findBytes": [
+            128,
+            187,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            132,
+            8,
+            5,
+            0,
+            0
+          ],
+          "replaceBytes": [
+            128,
+            187,
+            148,
+            0,
+            0,
+            0,
+            0,
+            233,
+            9,
+            5,
+            0,
+            0,
+            144
+          ],
+          "notes": "je_near\u2192jmp_near at foff=0x004fdbfc (je_near +0x508, target=0x004fe111). CMP-form bConstrainAspectRatio check: cmp byte [rbx+0x94],0 \u2192 je_near +0x508 fires when NOT constrained (flag=0). Fall-through (constrained path) computes letterbox Y-offset from [rbx+0x98], packs as (0.0, offset_y) and calls vtable at [rax+0xCB0] to set the constrained viewport origin \u2014 then loads [rdi+0x2a0] matrix, compares with [rdi+0x2d0], and updates [rdi+0x2e0/0x2e8] with constrained rect dimensions. This is the primary 3D viewport letterbox setter. Change je_near\u2192jmp_near (6\u21925 bytes + NOP, rel32 += 1) forces unconditional jump to 0x004fe111 (unconstrained return path), skipping all constrained viewport setup."
+        },
+        {
+          "offset": 5234755,
+          "findBytes": [
+            128,
+            187,
+            148,
+            0,
+            0,
+            0,
+            0,
+            199,
+            67,
+            120,
+            3,
+            0,
+            0,
+            0,
+            116,
+            36
+          ],
+          "replaceBytes": [
+            128,
+            187,
+            148,
+            0,
+            0,
+            0,
+            0,
+            199,
+            67,
+            120,
+            3,
+            0,
+            0,
+            0,
+            235,
+            36
+          ],
+          "notes": "je\u2192jmp at foff=0x004fe043 (je +36). CMP-form bConstrainAspectRatio check: cmp byte [rbx+0x94],0 \u2192 (mov dword [rbx+0x78],3) \u2192 je +36 fires when NOT constrained. Fall-through loads [rbx+0x68] and calls vtable at [rax+0x110] and [rax+0x268] with constrained viewport params. mov [rbx+0x78]=3 sets mode flag that marks constraint as applied. Change je\u2192jmp forces unconstrained path always \u2014 skips constrained vtable calls and leaves mode at its previous value."
+        },
+        {
+          "offset": 3871654,
+          "findBytes": [
+            198,
+            131,
+            148,
+            0,
+            0,
+            0,
+            1,
+            137
+          ],
+          "replaceBytes": [
+            198,
+            131,
+            148,
+            0,
+            0,
+            0,
+            0,
+            137
+          ],
+          "notes": "WRITER NOP: mov [rbx+0x94],1\u21920 at VA=0x1403b1da6. Prevents bConstrainAspectRatio from being set to 1."
+        },
+        {
+          "offset": 4306314,
+          "findBytes": [
+            198,
+            131,
+            148,
+            0,
+            0,
+            0,
+            1,
+            139
+          ],
+          "replaceBytes": [
+            198,
+            131,
+            148,
+            0,
+            0,
+            0,
+            0,
+            139
+          ],
+          "notes": "WRITER NOP: mov [rbx+0x94],1\u21920 at VA=0x14041bf8a."
+        },
+        {
+          "offset": 4306882,
+          "findBytes": [
+            198,
+            135,
+            148,
+            0,
+            0,
+            0,
+            1,
+            139
+          ],
+          "replaceBytes": [
+            198,
+            135,
+            148,
+            0,
+            0,
+            0,
+            0,
+            139
+          ],
+          "notes": "WRITER NOP: mov [rdi+0x94],1\u21920 at VA=0x14041c1c2."
+        },
+        {
+          "offset": 5030532,
+          "findBytes": [
+            198,
+            131,
+            148,
+            0,
+            0,
+            0,
+            1,
+            72,
+            131
+          ],
+          "replaceBytes": [
+            198,
+            131,
+            148,
+            0,
+            0,
+            0,
+            0,
+            72,
+            131
+          ],
+          "notes": "WRITER NOP: mov [rbx+0x94],1\u21920 at VA=0x1404ccc84."
+        },
+        {
+          "offset": 5083136,
+          "findBytes": [
+            198,
+            135,
+            148,
+            0,
+            0,
+            0,
+            1,
+            137
+          ],
+          "replaceBytes": [
+            198,
+            135,
+            148,
+            0,
+            0,
+            0,
+            0,
+            137
+          ],
+          "notes": "WRITER NOP: mov [rdi+0x94],1\u21920 at VA=0x1404d9a00."
+        },
+        {
+          "offset": 5091253,
+          "findBytes": [
+            198,
+            128,
+            148,
+            0,
+            0,
+            0,
+            1,
+            15,
+            40,
+            188,
+            36,
+            128,
+            0,
+            0,
+            0,
+            72
+          ],
+          "replaceBytes": [
+            198,
+            128,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            40,
+            188,
+            36,
+            128,
+            0,
+            0,
+            0,
+            72
+          ],
+          "notes": "WRITER NOP: mov [rax+0x94],1\u21920 at VA=0x1404db9b5."
+        },
+        {
+          "offset": 5184054,
+          "findBytes": [
+            198,
+            131,
+            148,
+            0,
+            0,
+            0,
+            1,
+            72,
+            139
+          ],
+          "replaceBytes": [
+            198,
+            131,
+            148,
+            0,
+            0,
+            0,
+            0,
+            72,
+            139
+          ],
+          "notes": "WRITER NOP: mov [rbx+0x94],1\u21920 at VA=0x1404f2436. This writer also calls vtable+0x1680 and stores the constrained AR at [rbx+0x90]. Combined with the movss NOP site below."
+        },
+        {
+          "offset": 5184070,
+          "findBytes": [
+            72,
+            139,
+            75,
+            104,
+            243,
+            15,
+            17,
+            131,
+            144,
+            0,
+            0,
+            0
+          ],
+          "replaceBytes": [
+            72,
+            139,
+            75,
+            104,
+            144,
+            144,
+            144,
+            144,
+            144,
+            144,
+            144,
+            144
+          ],
+          "notes": "MOVSS NOP: prevents movss [rbx+0x90],xmm0 at VA=0x1404f344a from storing the constrained AR (1.7778) into the ConstrainedAspectRatio lerp field. With the flag writer patched to write 0, the lerp now runs freely; this prevents the vtable+0x1680 call in the same writer from resetting [rbx+0x90] to the constrained AR each frame."
+        },
+        {
+          "offset": 5253121,
+          "findBytes": [
+            198,
+            128,
+            148,
+            0,
+            0,
+            0,
+            1,
+            15,
+            40,
+            188,
+            36,
+            128,
+            0,
+            0,
+            0,
+            68
+          ],
+          "replaceBytes": [
+            198,
+            128,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            40,
+            188,
+            36,
+            128,
+            0,
+            0,
+            0,
+            68
+          ],
+          "notes": "WRITER NOP: mov [rax+0x94],1\u21920 at VA=0x140503201."
+        },
+        {
+          "offset": 5346093,
+          "findBytes": [
+            198,
+            131,
+            148,
+            0,
+            0,
+            0,
+            1,
+            176,
+            1,
+            235
+          ],
+          "replaceBytes": [
+            198,
+            131,
+            148,
+            0,
+            0,
+            0,
+            0,
+            176,
+            1,
+            235
+          ],
+          "notes": "WRITER NOP: mov [rbx+0x94],1\u21920 at VA=0x140519d2d."
+        },
+        {
+          "offset": 5349981,
+          "findBytes": [
+            198,
+            131,
+            148,
+            0,
+            0,
+            0,
+            1,
+            176,
+            1,
+            72
+          ],
+          "replaceBytes": [
+            198,
+            131,
+            148,
+            0,
+            0,
+            0,
+            0,
+            176,
+            1,
+            72
+          ],
+          "notes": "WRITER NOP: mov [rbx+0x94],1\u21920 at VA=0x14051ac5d."
+        },
+        {
+          "offset": 5355763,
+          "findBytes": [
+            198,
+            131,
+            148,
+            0,
+            0,
+            0,
+            1,
+            15
+          ],
+          "replaceBytes": [
+            198,
+            131,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15
+          ],
+          "notes": "WRITER NOP: mov [rbx+0x94],1\u21920 at VA=0x14051c2f3."
+        },
+        {
+          "offset": 14962042,
+          "findBytes": [
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            1,
+            76,
+            137,
+            181
+          ],
+          "replaceBytes": [
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            0,
+            76,
+            137,
+            181
+          ],
+          "notes": "WRITER NOP: mov [rbp+0x94],1\u21920 at VA=0x140e4577a."
+        },
+        {
+          "offset": 15205870,
+          "findBytes": [
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            1,
+            72,
+            137,
+            181,
+            192,
+            0,
+            0,
+            0,
+            137,
+            181,
+            208,
+            0,
+            0,
+            0,
+            72
+          ],
+          "replaceBytes": [
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            0,
+            72,
+            137,
+            181,
+            192,
+            0,
+            0,
+            0,
+            137,
+            181,
+            208,
+            0,
+            0,
+            0,
+            72
+          ],
+          "notes": "WRITER NOP: mov [rbp+0x94],1\u21920 at VA=0x140e80fee."
+        },
+        {
+          "offset": 15205989,
+          "findBytes": [
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            1,
+            72,
+            137,
+            181,
+            192,
+            0,
+            0,
+            0,
+            137,
+            181,
+            208,
+            0,
+            0,
+            0,
+            232
+          ],
+          "replaceBytes": [
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            0,
+            72,
+            137,
+            181,
+            192,
+            0,
+            0,
+            0,
+            137,
+            181,
+            208,
+            0,
+            0,
+            0,
+            232
+          ],
+          "notes": "WRITER NOP: mov [rbp+0x94],1\u21920 at VA=0x140e81065."
+        },
+        {
+          "offset": 15686137,
+          "findBytes": [
+            77,
+            0,
+            199,
+            133,
+            144,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            1
+          ],
+          "replaceBytes": [
+            77,
+            0,
+            199,
+            133,
+            144,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            0
+          ],
+          "notes": "WRITER NOP: mov [rbp+0x94],1\u21920 at VA=0x140ef6405 (unique via pre-bytes context)."
+        },
+        {
+          "offset": 15687254,
+          "findBytes": [
+            144,
+            199,
+            133,
+            144,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            1
+          ],
+          "replaceBytes": [
+            144,
+            199,
+            133,
+            144,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            0
+          ],
+          "notes": "WRITER NOP: mov [rbp+0x94],1\u21920 at VA=0x140ef6861 (unique via pre-bytes context)."
+        },
+        {
+          "offset": 15688179,
+          "findBytes": [
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            1,
+            76,
+            137,
+            165,
+            192,
+            0,
+            0,
+            0,
+            68,
+            137,
+            165,
+            208,
+            0,
+            0,
+            0,
+            77
+          ],
+          "replaceBytes": [
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            0,
+            76,
+            137,
+            165,
+            192,
+            0,
+            0,
+            0,
+            68,
+            137,
+            165,
+            208,
+            0,
+            0,
+            0,
+            77
+          ],
+          "notes": "WRITER NOP: mov [rbp+0x94],1\u21920 at VA=0x140ef6bf3."
+        },
+        {
+          "offset": 15690310,
+          "findBytes": [
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            1,
+            232
+          ],
+          "replaceBytes": [
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            0,
+            232
+          ],
+          "notes": "WRITER NOP: mov [rbp+0x94],1\u21920 at VA=0x140ef7446."
+        },
+        {
+          "offset": 22175378,
+          "findBytes": [
+            198,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1
+          ],
+          "replaceBytes": [
+            198,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0
+          ],
+          "notes": "WRITER NOP: mov [rcx+0x94],1\u21920 at VA=0x141526892."
+        },
+        {
+          "offset": 23845960,
+          "findBytes": [
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            1,
+            76,
+            137,
+            165,
+            192,
+            0,
+            0,
+            0,
+            68,
+            137,
+            165,
+            208,
+            0,
+            0,
+            0,
+            68
+          ],
+          "replaceBytes": [
+            198,
+            133,
+            148,
+            0,
+            0,
+            0,
+            0,
+            76,
+            137,
+            165,
+            192,
+            0,
+            0,
+            0,
+            68,
+            137,
+            165,
+            208,
+            0,
+            0,
+            0,
+            68
+          ],
+          "notes": "WRITER NOP: mov [rbp+0x94],1\u21920 at VA=0x1416be648."
+        },
+        {
+          "offset": 27786590,
+          "findBytes": [
+            198,
+            128,
+            148,
+            0,
+            0,
+            0,
+            1,
+            72
+          ],
+          "replaceBytes": [
+            198,
+            128,
+            148,
+            0,
+            0,
+            0,
+            0,
+            72
+          ],
+          "notes": "WRITER NOP: mov [rax+0x94],1\u21920 at VA=0x141a8075e."
+        },
+        {
+          "offset": 45410315,
+          "findBytes": [
+            198,
+            135,
+            148,
+            0,
+            0,
+            0,
+            1,
+            72,
+            199
+          ],
+          "replaceBytes": [
+            198,
+            135,
+            148,
+            0,
+            0,
+            0,
+            0,
+            72,
+            199
+          ],
+          "notes": "WRITER NOP: mov [rdi+0x94],1\u21920 at VA=0x142b4f20b."
+        },
+        {
+          "offset": 45489845,
+          "findBytes": [
+            198,
+            135,
+            148,
+            0,
+            0,
+            0,
+            1,
+            198
+          ],
+          "replaceBytes": [
+            198,
+            135,
+            148,
+            0,
+            0,
+            0,
+            0,
+            198
+          ],
+          "notes": "WRITER NOP: mov [rdi+0x94],1\u21920 at VA=0x142b628b5."
+        },
+        {
+          "offset": 53309177,
+          "findBytes": [
+            198,
+            135,
+            148,
+            0,
+            0,
+            0,
+            1,
+            72,
+            139,
+            1,
+            255,
+            80,
+            80
+          ],
+          "replaceBytes": [
+            198,
+            135,
+            148,
+            0,
+            0,
+            0,
+            0,
+            72,
+            139,
+            1,
+            255,
+            80,
+            80
+          ],
+          "notes": "WRITER NOP: mov [rdi+0x94],1\u21920 at VA=0x1432d78f9 (cluster of 3 writers in quick succession)."
+        },
+        {
+          "offset": 53309244,
+          "findBytes": [
+            198,
+            135,
+            148,
+            0,
+            0,
+            0,
+            1,
+            72,
+            139,
+            1,
+            255,
+            80,
+            72
+          ],
+          "replaceBytes": [
+            198,
+            135,
+            148,
+            0,
+            0,
+            0,
+            0,
+            72,
+            139,
+            1,
+            255,
+            80,
+            72
+          ],
+          "notes": "WRITER NOP: mov [rdi+0x94],1\u21920 at VA=0x1432d793c."
+        },
+        {
+          "offset": 53309272,
+          "findBytes": [
+            198,
+            135,
+            148,
+            0,
+            0,
+            0,
+            1,
+            72,
+            139,
+            1,
+            255,
+            80,
+            88
+          ],
+          "replaceBytes": [
+            198,
+            135,
+            148,
+            0,
+            0,
+            0,
+            0,
+            72,
+            139,
+            1,
+            255,
+            80,
+            88
+          ],
+          "notes": "WRITER NOP: mov [rdi+0x94],1\u21920 at VA=0x1432d7958."
+        },
+        {
+          "offset": 4306202,
+          "findBytes": [
+            128,
+            187,
+            148,
+            0,
+            0,
+            0,
+            0,
+            117,
+            110
+          ],
+          "replaceBytes": [
+            128,
+            187,
+            148,
+            0,
+            0,
+            0,
+            0,
+            144,
+            144
+          ],
+          "notes": "LERP NOP (rbx): cmp [rbx+0x94],0; jne+0x6e \u2192 jne\u2192NOP at foff=0x0041b51a. When bConstrainAspectRatio=1, jne would skip the ConstrainedAspectRatio lerp decrement of [rbx+0x90]. With jne NOPed, the lerp ALWAYS runs, continuously decrementing [rbx+0x90] toward 0 even when the flag is 1. Combined with writer NOPs (flag stays 0), this ensures [rbx+0x90] decays to 0 = fully unconstrained viewport."
+        },
+        {
+          "offset": 4306730,
+          "findBytes": [
+            128,
+            191,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            133,
+            146,
+            0,
+            0,
+            0
+          ],
+          "replaceBytes": [
+            128,
+            191,
+            148,
+            0,
+            0,
+            0,
+            0,
+            144,
+            144,
+            144,
+            144,
+            144,
+            144
+          ],
+          "notes": "LERP NOP (rdi): cmp [rdi+0x94],0; jne_near \u2192 jne_near\u2192NOP6 at foff=0x0041b72a. Parallel structure to the rbx lerp above but for rdi-based viewport objects."
+        },
+        {
+          "offset": 2539228,
+          "findBytes": [
+            246,
+            135,
+            148,
+            0,
+            0,
+            0,
+            1,
+            15,
+            132
+          ],
+          "replaceBytes": [
+            246,
+            135,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            132
+          ]
+        },
+        {
+          "offset": 32762761,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            117,
+            60,
+            65,
+            139,
+            68,
+            144
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            117,
+            60,
+            65,
+            139,
+            68,
+            144
+          ]
+        },
+        {
+          "offset": 32763284,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            117,
+            60,
+            65,
+            139,
+            68,
+            144
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            117,
+            60,
+            65,
+            139,
+            68,
+            144
+          ]
+        },
+        {
+          "offset": 32902797,
+          "findBytes": [
+            246,
+            128,
+            148,
+            0,
+            0,
+            0,
+            1,
+            116,
+            13
+          ],
+          "replaceBytes": [
+            246,
+            128,
+            148,
+            0,
+            0,
+            0,
+            0,
+            116,
+            13
+          ]
+        },
+        {
+          "offset": 32964133,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            15,
+            132,
+            138
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            132,
+            138
+          ]
+        },
+        {
+          "offset": 33853292,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            15,
+            132,
+            35
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            132,
+            35
+          ]
+        },
+        {
+          "offset": 33897308,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            117,
+            9
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            117,
+            9
+          ]
+        },
+        {
+          "offset": 33905293,
+          "findBytes": [
+            246,
+            128,
+            148,
+            0,
+            0,
+            0,
+            1,
+            15,
+            132,
+            68
+          ],
+          "replaceBytes": [
+            246,
+            128,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            132,
+            68
+          ]
+        },
+        {
+          "offset": 33911236,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            15,
+            132,
+            140
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            132,
+            140
+          ]
+        },
+        {
+          "offset": 33965793,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            116,
+            11
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            116,
+            11
+          ]
+        },
+        {
+          "offset": 33970455,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            117,
+            7
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            117,
+            7
+          ]
+        },
+        {
+          "offset": 33986245,
+          "findBytes": [
+            246,
+            128,
+            148,
+            0,
+            0,
+            0,
+            1,
+            116,
+            2
+          ],
+          "replaceBytes": [
+            246,
+            128,
+            148,
+            0,
+            0,
+            0,
+            0,
+            116,
+            2
+          ]
+        },
+        {
+          "offset": 34275531,
+          "findBytes": [
+            246,
+            128,
+            148,
+            0,
+            0,
+            0,
+            1,
+            117,
+            41
+          ],
+          "replaceBytes": [
+            246,
+            128,
+            148,
+            0,
+            0,
+            0,
+            0,
+            117,
+            41
+          ]
+        },
+        {
+          "offset": 34458911,
+          "findBytes": [
+            246,
+            131,
+            148,
+            0,
+            0,
+            0,
+            1,
+            116,
+            9
+          ],
+          "replaceBytes": [
+            246,
+            131,
+            148,
+            0,
+            0,
+            0,
+            0,
+            116,
+            9
+          ]
+        },
+        {
+          "offset": 33834285,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            185,
+            156,
+            3,
+            0,
+            0,
+            15,
+            68,
+            193,
+            131,
+            226
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            185,
+            156,
+            3,
+            0,
+            0,
+            15,
+            68,
+            193,
+            131,
+            226
+          ]
+        },
+        {
+          "offset": 33837397,
+          "findBytes": [
+            246,
+            130,
+            148,
+            0,
+            0,
+            0,
+            1,
+            15,
+            68,
+            193,
+            242
+          ],
+          "replaceBytes": [
+            246,
+            130,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            68,
+            193,
+            242
+          ]
+        },
+        {
+          "offset": 33840913,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            185,
+            156,
+            3,
+            0,
+            0,
+            15,
+            68,
+            193,
+            242
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            185,
+            156,
+            3,
+            0,
+            0,
+            15,
+            68,
+            193,
+            242
+          ]
+        },
+        {
+          "offset": 33848450,
+          "findBytes": [
+            246,
+            130,
+            148,
+            0,
+            0,
+            0,
+            1,
+            15,
+            68,
+            193,
+            131
+          ],
+          "replaceBytes": [
+            246,
+            130,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            68,
+            193,
+            131
+          ]
+        },
+        {
+          "offset": 33866237,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            243,
+            68
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            243,
+            68
+          ]
+        },
+        {
+          "offset": 33873111,
+          "findBytes": [
+            246,
+            130,
+            148,
+            0,
+            0,
+            0,
+            1,
+            15,
+            68,
+            193,
+            51
+          ],
+          "replaceBytes": [
+            246,
+            130,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            68,
+            193,
+            51
+          ]
+        },
+        {
+          "offset": 33932683,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            185,
+            156,
+            3,
+            0,
+            0,
+            15,
+            68,
+            193,
+            246,
+            131
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            185,
+            156,
+            3,
+            0,
+            0,
+            15,
+            68,
+            193,
+            246,
+            131
+          ]
+        },
+        {
+          "offset": 33993644,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            15,
+            68,
+            193,
+            72,
+            139,
+            207
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            68,
+            193,
+            72,
+            139,
+            207
+          ]
+        },
+        {
+          "offset": 34002480,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            185,
+            156,
+            3,
+            0,
+            0,
+            15,
+            68,
+            193,
+            51
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            185,
+            156,
+            3,
+            0,
+            0,
+            15,
+            68,
+            193,
+            51
+          ]
+        },
+        {
+          "offset": 34004150,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            185,
+            156,
+            3,
+            0,
+            0,
+            76
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            185,
+            156,
+            3,
+            0,
+            0,
+            76
+          ]
+        },
+        {
+          "offset": 34006762,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            15,
+            68,
+            193,
+            72,
+            139,
+            203
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            68,
+            193,
+            72,
+            139,
+            203
+          ]
+        },
+        {
+          "offset": 34127703,
+          "findBytes": [
+            246,
+            130,
+            148,
+            0,
+            0,
+            0,
+            1,
+            15,
+            68,
+            193,
+            72
+          ],
+          "replaceBytes": [
+            246,
+            130,
+            148,
+            0,
+            0,
+            0,
+            0,
+            15,
+            68,
+            193,
+            72
+          ]
+        },
+        {
+          "offset": 34138793,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            185,
+            156,
+            3,
+            0,
+            0,
+            15,
+            68,
+            193,
+            131,
+            190
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            185,
+            156,
+            3,
+            0,
+            0,
+            15,
+            68,
+            193,
+            131,
+            190
+          ]
+        },
+        {
+          "offset": 33978076,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            185,
+            156,
+            3,
+            0,
+            0,
+            15,
+            68,
+            193,
+            246,
+            135
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            185,
+            156,
+            3,
+            0,
+            0,
+            15,
+            68,
+            193,
+            246,
+            135
+          ]
+        },
+        {
+          "offset": 33982393,
+          "findBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            1,
+            185,
+            156,
+            3,
+            0,
+            0,
+            15,
+            68,
+            193,
+            72
+          ],
+          "replaceBytes": [
+            246,
+            129,
+            148,
+            0,
+            0,
+            0,
+            0,
+            185,
+            156,
+            3,
+            0,
+            0,
+            15,
+            68,
+            193,
+            72
+          ]
+        },
+        {
+          "offset": 5084073,
+          "findBytes": [
+            128,
+            191,
+            148,
+            0,
+            0,
+            0,
+            0,
+            117,
+            13
+          ],
+          "replaceBytes": [
+            128,
+            191,
+            148,
+            0,
+            0,
+            0,
+            0,
+            144,
+            144
+          ]
+        },
+        {
+          "offset": 5336677,
+          "findBytes": [
+            128,
+            187,
+            148,
+            0,
+            0,
+            0,
+            0,
+            116,
+            8
+          ],
+          "replaceBytes": [
+            128,
+            187,
+            148,
+            0,
+            0,
+            0,
+            0,
+            235,
+            8
+          ]
+        },
+        {
+          "offset": 15686668,
+          "findBytes": [
+            128,
+            189,
+            148,
+            0,
+            0,
+            0,
+            0,
+            116,
+            12,
+            139,
+            133,
+            144,
+            0
+          ],
+          "replaceBytes": [
+            128,
+            189,
+            148,
+            0,
+            0,
+            0,
+            0,
+            235,
+            12,
+            139,
+            133,
+            144,
+            0
+          ]
+        },
+        {
+          "offset": 15687633,
+          "findBytes": [
+            128,
+            189,
+            148,
+            0,
+            0,
+            0,
+            0,
+            116,
+            12,
+            139,
+            133,
+            144,
+            0
+          ],
+          "replaceBytes": [
+            128,
+            189,
+            148,
+            0,
+            0,
+            0,
+            0,
+            235,
+            12,
+            139,
+            133,
+            144,
+            0
+          ]
+        },
+        {
+          "offset": 20170538,
+          "findBytes": [
+            128,
+            189,
+            148,
+            0,
+            0,
+            0,
+            0,
+            116,
+            35
+          ],
+          "replaceBytes": [
+            128,
+            189,
+            148,
+            0,
+            0,
+            0,
+            0,
+            235,
+            35
+          ]
+        },
+        {
+          "offset": 22207919,
+          "findBytes": [
+            128,
+            190,
+            148,
+            0,
+            0,
+            0,
+            0,
+            116,
+            26
+          ],
+          "replaceBytes": [
+            128,
+            190,
+            148,
+            0,
+            0,
+            0,
+            0,
+            235,
+            26
+          ]
+        },
+        {
+          "offset": 22208673,
+          "findBytes": [
+            128,
+            190,
+            148,
+            0,
+            0,
+            0,
+            0,
+            116,
+            34
+          ],
+          "replaceBytes": [
+            128,
+            190,
+            148,
+            0,
+            0,
+            0,
+            0,
+            235,
+            34
+          ]
+        },
+        {
+          "offset": 22217063,
+          "findBytes": [
+            128,
+            187,
+            148,
+            0,
+            0,
+            0,
+            0,
+            116,
+            33
+          ],
+          "replaceBytes": [
+            128,
+            187,
+            148,
+            0,
+            0,
+            0,
+            0,
+            235,
+            33
+          ]
+        },
+        {
+          "offset": 22221956,
+          "findBytes": [
+            128,
+            191,
+            148,
+            0,
+            0,
+            0,
+            0,
+            116,
+            26
+          ],
+          "replaceBytes": [
+            128,
+            191,
+            148,
+            0,
+            0,
+            0,
+            0,
+            235,
+            26
+          ]
+        },
+        {
+          "offset": 53309077,
+          "findBytes": [
+            128,
+            191,
+            148,
+            0,
+            0,
+            0,
+            0,
+            116,
+            6
+          ],
+          "replaceBytes": [
+            128,
+            191,
+            148,
+            0,
+            0,
+            0,
+            0,
+            235,
+            6
+          ]
+        },
+        {
+          "offset": 30037289,
+          "findBytes": [
+            59,
+            142,
+            227,
+            63
+          ],
+          "aspectRatioReplace": true,
+          "notes": "mov [rax+0x428], 1.7778f \u2014 camera struct ConstrainedAspectRatio init A"
+        },
+        {
+          "offset": 30037360,
+          "findBytes": [
+            59,
+            142,
+            227,
+            63
+          ],
+          "aspectRatioReplace": true,
+          "notes": "mov [rdi+0x408], 1.7778f \u2014 camera struct AspectRatio init A"
+        },
+        {
+          "offset": 30042396,
+          "findBytes": [
+            59,
+            142,
+            227,
+            63
+          ],
+          "aspectRatioReplace": true,
+          "notes": "mov [rbx+0x428], 1.7778f \u2014 camera struct ConstrainedAspectRatio init B"
+        },
+        {
+          "offset": 34651057,
+          "findBytes": [
+            50,
+            142,
+            227,
+            63
+          ],
+          "aspectRatioReplace": true,
+          "notes": "mov [rdi+0x408], 1.7778f variant \u2014 camera struct AspectRatio init C"
+        }
+      ]
+    }
+  ]
+}

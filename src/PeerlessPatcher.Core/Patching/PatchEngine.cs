@@ -95,6 +95,9 @@ public sealed class PatchEngine : IDisposable
     public bool HasInstallPath =>
         _context is not null && !string.IsNullOrEmpty(_context.GameInstallPath);
 
+    /// <summary>Returns the current resolved game install path, or null if not attached.</summary>
+    public string? CurrentInstallPath => _context?.GameInstallPath;
+
     /// <summary>
     /// Directly sets the game install path without re-attaching to a process.
     /// Use when the user manually overrides the path that Steam auto-detection returned.
@@ -139,6 +142,32 @@ public sealed class PatchEngine : IDisposable
             return new PatchResult(PatchResultStatus.Unsupported, $"Unknown patch type: {entry.Type}");
 
         return handler.Probe(_context, entry);
+    }
+
+    /// <summary>
+    /// Probes all patches in a profile against an explicit install path, without
+    /// touching or requiring the engine's current attachment context.
+    /// Use this for startup checks where multiple profiles need to be probed in sequence.
+    /// </summary>
+    public IReadOnlyList<(PatchEntry Entry, PatchResultStatus Status)> ProbeAll(
+        string installPath, IEnumerable<PatchEntry> patches)
+    {
+        var ctx = new PatchContext
+        {
+            GameInstallPath = installPath,
+            ScreenWidth     = ScreenWidth,
+            ScreenHeight    = ScreenHeight,
+        };
+
+        var results = new List<(PatchEntry, PatchResultStatus)>();
+        foreach (var patch in patches)
+        {
+            var status = _handlers.TryGetValue(patch.Type, out var handler)
+                ? handler.Probe(ctx, patch).Status
+                : PatchResultStatus.Unsupported;
+            results.Add((patch, status));
+        }
+        return results;
     }
 
     private PatchResult Dispatch(PatchEntry entry, bool isApply)

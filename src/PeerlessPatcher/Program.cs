@@ -60,69 +60,55 @@ internal static class Program
 
         // ── Pre-game setup: find installed profiles and load them immediately ──
         // File-based patches (file-hex-edit) don't need the game to be running.
-        // We probe Steam for each profile's install path and show it right away
-        // so the user can apply patches before launching the game.
-        PatchProfile? firstInstalled = null;
+        // We probe Steam (or saved path overrides) for each profile's install path,
+        // register it in the UI, and read the EXEs to reflect the current patch state.
+        //
+        // Each profile is handled independently — resolving its path and probing its
+        // patches without mutating the engine's shared context, so there is no hidden
+        // ordering dependency between profiles.
+        var profilesById = profiles.ToDictionary(p => p.GameId, StringComparer.OrdinalIgnoreCase);
+
         foreach (var profile in profiles)
         {
-            // Use user-saved override path first, then Steam auto-detection.
-            string? installPath = null;
-            if (pathOverrides.TryGetValue(profile.GameId, out var manualPath) &&
-                Directory.Exists(manualPath))
-            {
-                installPath = manualPath;
-                log.LogInformation("Using manual path override for {Name}: {Path}", profile.GameName, installPath);
-            }
-            else
-            {
-                installPath = SteamLocator.FindGameInstallPath(profile.SteamAppId, profile.InstallDir);
-            }
-
-            // Always register the profile so it appears in the Patches tab immediately,
-            // even before the install path is known. If no path is found yet the user can
-            // set one manually via the Paths tab; the auto-detect from a running process
-            // will also fill it in later.
             overlay.OnProfileLoaded(profile);
 
-            if (installPath is not null)
+            var installPath = ResolveInstallPath(profile, pathOverrides, log);
+            if (installPath is null)
             {
-                if (firstInstalled is null)
-                {
-                    firstInstalled = profile;
-                    patchEngine.AttachInstallOnly(profile);
-                    if (pathOverrides.TryGetValue(profile.GameId, out var ovr) && Directory.Exists(ovr))
-                        patchEngine.SetInstallPath(ovr);
-                }
-                overlay.SetResolvedPath(profile.GameId, installPath,
-                    isManual: pathOverrides.ContainsKey(profile.GameId));
-                ProbeAndSync(profile);
-                log.LogInformation("Found installed game: {Name} at {Path}", profile.GameName, installPath);
+                log.LogDebug("Game not installed or path not found: {Name} (AppID {Id})", profile.GameName, profile.SteamAppId);
+                continue;
             }
-            else
-            {
-                log.LogDebug("Game not installed or install path not found: {Name} (AppID {Id})", profile.GameName, profile.SteamAppId);
-            }
+
+            overlay.SetResolvedPath(profile.GameId, installPath,
+                isManual: pathOverrides.ContainsKey(profile.GameId));
+
+            // Probe all patches for this profile directly against its resolved path.
+            // ProbeAll does not require or modify the engine's shared context.
+            var probeResults = patchEngine.ProbeAll(installPath, profile.Patches);
+            overlay.SyncPatchStatesFromDisk(profile.GameId, probeResults);
+
+            log.LogInformation("Found installed game: {Name} at {Path}", profile.GameName, installPath);
         }
 
         // ── Path override handler ──────────────────────────────────────────────
-        // Build a lookup of profiles by gameId for the event handler.
-        var profilesById = profiles.ToDictionary(p => p.GameId, StringComparer.OrdinalIgnoreCase);
 
         overlay.PathOverrideChanged += (gameId, newPath) =>
         {
             pathOverrides[gameId] = newPath;
             SaveSettings(settingsFile, settings, log);
 
-            // If this is the active profile, update the patch engine immediately.
             if (profilesById.TryGetValue(gameId, out var profile))
             {
+                // Update the engine's install path so Apply/Revert work for this profile.
                 patchEngine.AttachInstallOnly(profile);
                 patchEngine.SetInstallPath(newPath);
 
-                // Also show the profile in the UI if it wasn't found before.
                 overlay.OnProfileLoaded(profile);
                 overlay.SetResolvedPath(gameId, newPath, isManual: true);
-                ProbeAndSync(profile);
+
+                // Re-probe against the new path so the UI reflects current disk state.
+                var probeResults = patchEngine.ProbeAll(newPath, profile.Patches);
+                overlay.SyncPatchStatesFromDisk(gameId, probeResults);
             }
 
             log.LogInformation("Path override saved for {GameId}: {Path}", gameId, newPath);
@@ -210,15 +196,31 @@ internal static class Program
             }
 
             overlay.OnGameExited(e.Profile.GameId);
-            ProbeAndSync(e.Profile);
+
+            // Re-read the EXE to confirm which patches are still applied after the session.
+            if (patchEngine.HasInstallPath)
+            {
+                var probeResults = patchEngine.ProbeAll(patchEngine.CurrentInstallPath!, e.Profile.Patches);
+                overlay.SyncPatchStatesFromDisk(e.Profile.GameId, probeResults);
+            }
+
             log.LogInformation("Game exited: {Name}", e.Profile.GameName);
         };
 
-        // ── Local helper: probe all patches for a profile and sync UI state ────
-        void ProbeAndSync(PatchProfile profile)
+        // ── Local helper: resolve install path for a profile ──────────────────
+        // Prefers a saved manual override; falls back to Steam auto-detection.
+        string? ResolveInstallPath(PatchProfile profile, Dictionary<string, string> overrides, ILogger logger)
         {
-            var results = profile.Patches.Select(p => (p, patchEngine.Probe(p).Status));
-            overlay.SyncPatchStatesFromDisk(profile.GameId, results);
+            if (overrides.TryGetValue(profile.GameId, out var manual) && Directory.Exists(manual))
+            {
+                logger.LogInformation("Using saved path for {Name}: {Path}", profile.GameName, manual);
+                return manual;
+            }
+
+            var steam = SteamLocator.FindGameInstallPath(profile.SteamAppId, profile.InstallDir);
+            if (steam is null)
+                logger.LogWarning("Could not locate Steam install directory for AppID {AppId}.", profile.SteamAppId);
+            return steam;
         }
 
         detector.Start();

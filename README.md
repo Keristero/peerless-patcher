@@ -11,8 +11,8 @@ It might work with the epic games store versions too, but I have not tested it -
 
 ### What this is
 - A really easy way to install basic ultrawide fixes that remove black bars for gameplay
-- A generic patching tool with some built in patches from the pc gaming wiki
-  - There are a few small improvements over the patches I found there, like scaling the viewport seperately from the UI in kingdom hearts BBS
+- A generic patching tool with some built in patches from the pc gaming wiki, additionally there are new and improved patches for BBS, 2.8 and DDD.
+
 
 ### What this is not
 - A handcrafted high quality tool
@@ -35,8 +35,9 @@ If the game paths are not auto detected, go to the paths tab and manually point 
 `/run/media/system/Samsung980Pro/SteamLibrary/steamapps/common/KINGDOM HEARTS -HD 1.5+2.5 ReMIX-`
 - hit apply then try patch them after this
 
-# Known bugs
-- Sometimes I have to go to the paths tab and hit apply on the paths before the patches will be detected as applied on startup.
+# Known issues
+- There are often glitchy looking effects outside the original 16:9 aspect ratio
+- Using narrower aspect ratios than 16:9 wont work well at all because I've avoided scaling the UI
 
 # Report bugs
 - If none of the above worked, add a issue to the github and if I have time i'll try fix it.
@@ -54,7 +55,6 @@ If the game paths are not auto detected, go to the paths tab and manually point 
 ## Status
 - I've only tested the first few minutes of gameplay in every game, if you have any issues report them in issues or something, try to include as much detail as you can, as well as what platform you are on.
 - I've only tested on bazzite linux using proton, with 3440x1440 patches so far, it should work for other screen aspect ratios also, but im not sure.
-- KH2FM, KH1FM, Re:CoM: two-site patches (AR float + FOV denominator). BBS uses a shadow-constant redirect technique to patch projection without affecting UI bounds.
 
 
 ## Bundled Profiles

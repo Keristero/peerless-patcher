@@ -23,3 +23,8 @@ packages/
 
 # Logs
 *.log
+
+# Ghidra — local install and analysis projects (large binaries)
+tools/ghidra/
+tools/ghidra-projects/
+appimagetool-x86_64.AppImage
