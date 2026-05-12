@@ -61,13 +61,13 @@ If the game paths are not auto detected, go to the paths tab and manually point 
 
 | Game | Steam App ID | Status | Patch |
 |------|-------------|--------|-------|
-| Kingdom Hearts III | 897780 | ✅ Working | Ultrawide aspect ratio — 5 camera struct writes + shadow-constant redirect on viewport pillarbox float (all 8 callers) |
-| Kingdom Hearts HD 2.8 — 0.2 Birth by Sleep | 2552440 | ✅ Working | 100-site fix: AR float rewrites + bConstrainAspectRatio branch NOPs + inline camera struct AR writes |
-| Kingdom Hearts HD 2.8 — Dream Drop Distance | 2552440 | ✅ Working | Shadow-constant redirect on FOV denominator (6-site patch, UI preserved) |
-| Kingdom Hearts HD 1.5+2.5 ReMIX — KH2 Final Mix | 2552430 | ✅ Working | Ultrawide fix: AR float + FOV denominator (two-site patch) |
-| Kingdom Hearts HD 1.5+2.5 ReMIX — KH1 Final Mix | 2552430 | ✅ Working | Ultrawide fix: AR float + FOV denominator (two-site patch) |
-| Kingdom Hearts HD 1.5+2.5 ReMIX — Re:Chain of Memories | 2552430 | ✅ Working | Ultrawide fix: AR float + FOV denominator (two-site patch) |
-| Kingdom Hearts HD 1.5+2.5 ReMIX — Birth by Sleep | 2552430 | ✅ Working | Ultrawide fix: shadow-constant redirect (seven-site patch, UI preserved) |
+| Kingdom Hearts III | 897780 | Working | Ultrawide without stretching UI |
+| Kingdom Hearts HD 2.8 — 0.2 Birth by Sleep | 2552440 | Working | Ultrawide without stretching UI |
+| Kingdom Hearts HD 2.8 — Dream Drop Distance | 2552440 | Working | Ultrawide without stretching UI |
+| Kingdom Hearts HD 1.5+2.5 ReMIX — KH2 Final Mix | 2552430 | Working | Ultrawide without stretching UI |
+| Kingdom Hearts HD 1.5+2.5 ReMIX — KH1 Final Mix | 2552430 | Working | Ultrawide without stretching UI |
+| Kingdom Hearts HD 1.5+2.5 ReMIX — Re:Chain of Memories | 2552430 | Working | Ultrawide without stretching UI |
+| Kingdom Hearts HD 1.5+2.5 ReMIX — Birth by Sleep | 2552430 | Working | Ultrawide without stretching UI |
 
 ## Downloads
 

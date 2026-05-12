@@ -27,6 +27,21 @@ Shortcut for `.rdata` constants: `VA = 0x140000000 + foff + (0x5C0C000 − 0x5C0
 
 ---
 
+## Bisect Results (site 6 callers)
+
+| Callers active | Result |
+|----------------|--------|
+| All 8 | Gameplay UW + UI stretched |
+| 1-4 only | Gameplay 16:9, UI not stretched |
+| 5+6 only | Splash UW, gameplay 16:9 |
+| 7+8 only | Gameplay UW + UI stretched |
+| 7 only | UI stretched, gameplay 16:9 (broken) |
+| **8 only** | **Gameplay UW + UI correct ✅** |
+
+**Conclusion**: Caller 8 (`movss xmm7` at foff=`0x0411462B`) is the sole site-6 caller that drives gameplay viewport width without touching UI centering math. Caller 7 stretches the UI without enabling gameplay UW — it appears to control something orthogonal (possibly a separate 2D pass). Callers 1-6 are pure UI/letterbox centering and have no effect on gameplay UW.
+
+---
+
 ## Speculation
 
 | Hypothesis | Confidence | Basis | Next test |
@@ -50,7 +65,7 @@ Shortcut for `.rdata` constants: `VA = 0x140000000 + foff + (0x5C0C000 − 0x5C0
 | `0x011790D8` | `0x141179AD8` | `mulss xmm0,[rel]` | Width multiply in letterbox path |
 | `0x01722D92` | `0x141723792` | `movss xmm5,[rel]` → `subss xmm1,xmm5` → `andps` → `comiss` | Centering offset calc |
 | `0x01725973` | `0x141726373` | `movss xmm7,[rel]` → used in loop | Centering offset calc (loop variant) |
-| `0x038F866F` | `0x1438F906F` | `movss xmm6,[rel]` → `subss xmm0,xmm6` → `comiss xmm0,xmm9` → `jnc` | Viewport centering |
-| `0x0411462B` | `0x14411502B` | `movss xmm7,[rel]` → `subss xmm0,xmm7` → `comiss xmm0,xmm9` → `jnc` | Viewport centering (2nd renderer) |
+| `0x038F866F` | `0x1438F906F` | `movss xmm6,[rel]` → `subss xmm0,xmm6` → `comiss xmm0,xmm9` → `jnc` | Stretches UI but does NOT drive gameplay UW (breaks rendering when alone) |
+| `0x0411462B` | `0x14411502B` | `movss xmm7,[rel]` → `subss xmm0,xmm7` → `comiss xmm0,xmm9` → `jnc` | **Sole gameplay viewport driver** — redirecting only this caller gives UW gameplay + correct UI ✅ |
 
 All 8 callers follow the same pattern: subtract 1.7777 from actual AR, compare to zero, branch into a centering/letterbox calculation. These are the UI centering functions — they compute how much to offset UI elements when the screen is wider than 16:9. When site 6 is patched to ultrawide AR, the subtraction result is ≈0, the branch skips the offset calc, and UI elements are placed at full-width coordinates → stretching.

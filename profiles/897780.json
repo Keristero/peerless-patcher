@@ -42,7 +42,7 @@
     {
       "type": "file-hex-edit",
       "name": "Ultrawide Aspect Ratio (Viewport)",
-      "description": "Shadow-constant redirect for the pillarbox float at 0x065675C8. Site 1: splash/boot rdata float. Site 2: shadow slot at 0x065675DC (free zero slot +0x14 from site6) receives the UW AR. Site 6 itself (0x065675C8) is NOT patched — its 7 UI-centering callers must keep reading 1.7777 to avoid UI stretch. Only the mulss viewport-width caller is redirected to the shadow via site 3.",
+      "description": "Shadow-constant redirect for the pillarbox float at 0x065675C8. Shadow slot at foff=0x065675DC receives the UW AR. Site 6 (0x065675C8) itself is NOT patched — callers 1-7 must keep reading 1.7777. Only caller 8 (movss xmm7 at foff=0x0411462B, the second-renderer viewport path) is redirected to the shadow. This is the sole caller that drives gameplay ultrawide without stretching the UI.",
       "filePath": "KINGDOM HEARTS III/Binaries/Win64/KINGDOM HEARTS III.exe",
       "sites": [
         {
@@ -55,12 +55,9 @@
           "offset": 106329564,
           "findBytes": [0, 0, 0, 0],
           "aspectRatioReplace": true,
-          "notes": "Shadow slot at foff=0x065675DC (VA 0x1465687DC). Free zero slot +0x14 from site6. All 8 site6 callers redirect here."
+          "notes": "Shadow slot at foff=0x065675DC (VA 0x1465687DC). Free zero slot +0x14 from site6. Only caller 8 redirects here."
         },
-        {"offset": 15513857, "findBytes": [195, 196, 105, 5], "replaceBytes": [215, 196, 105, 5], "notes": "Redirect caller 1 (movss xmm4) at foff=0x00ECB8FD → shadow"},
-        {"offset": 18321505, "findBytes": [99, 237, 62, 5], "replaceBytes": [119, 237, 62, 5], "notes": "Redirect caller 2 (subss xmm0) at foff=0x0117905D → shadow"},
-        {"offset": 18321582, "findBytes": [22, 237, 62, 5], "replaceBytes": [42, 237, 62, 5], "notes": "Redirect caller 3 (subss xmm0) at foff=0x011790AA → shadow"},
-        {"offset": 18321628, "findBytes": [232, 236, 62, 5], "replaceBytes": [252, 236, 62, 5], "notes": "Redirect caller 4 (mulss xmm0) at foff=0x011790D8 → shadow"}
+        {"offset": 68240943, "findBytes": [149, 55, 69, 2], "replaceBytes": [169, 55, 69, 2], "notes": "Redirect caller 8 (movss xmm7) at foff=0x0411462B → shadow"}
       ]
     }
   ]
