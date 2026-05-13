@@ -102,6 +102,7 @@ public sealed class ProfileLoader
             GameName = profile.GameName,
             SteamAppId = profile.SteamAppId,
             ProcessName = profile.ProcessName,
+            InstallDir = profile.InstallDir,
             Patches = [.. validPatches],
         };
     }

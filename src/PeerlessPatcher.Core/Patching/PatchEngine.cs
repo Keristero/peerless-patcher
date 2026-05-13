@@ -135,13 +135,16 @@ public sealed class PatchEngine : IDisposable
     /// </summary>
     public PatchResult Probe(PatchEntry entry)
     {
-        if (_context is null)
-            return new PatchResult(PatchResultStatus.Error, "Not attached to any game process.");
+        var readinessError = ValidateContextForEntry(entry);
+        if (readinessError is not null)
+            return new PatchResult(PatchResultStatus.Error, readinessError);
+
+        var context = _context!;
 
         if (!_handlers.TryGetValue(entry.Type, out var handler))
             return new PatchResult(PatchResultStatus.Unsupported, $"Unknown patch type: {entry.Type}");
 
-        return handler.Probe(_context, entry);
+        return handler.Probe(context, entry);
     }
 
     /// <summary>
@@ -172,8 +175,11 @@ public sealed class PatchEngine : IDisposable
 
     private PatchResult Dispatch(PatchEntry entry, bool isApply)
     {
-        if (_context is null)
-            return new PatchResult(PatchResultStatus.Error, "Not attached to any game process.");
+        var readinessError = ValidateContextForEntry(entry);
+        if (readinessError is not null)
+            return new PatchResult(PatchResultStatus.Error, readinessError);
+
+        var context = _context!;
 
         if (!_handlers.TryGetValue(entry.Type, out var handler))
         {
@@ -181,7 +187,27 @@ public sealed class PatchEngine : IDisposable
             return new PatchResult(PatchResultStatus.Unsupported, $"Unknown patch type: {entry.Type}");
         }
 
-        return isApply ? handler.Apply(_context, entry) : handler.Revert(_context, entry);
+        return isApply ? handler.Apply(context, entry) : handler.Revert(context, entry);
+    }
+
+    private string? ValidateContextForEntry(PatchEntry entry)
+    {
+        if (_context is null)
+            return "No game path found,\nrun the game or add the path manually in the paths tab";
+
+        var type = entry.Type?.Trim().ToLowerInvariant();
+
+        if (type is "file-hex-edit" or "file-replace")
+        {
+            if (string.IsNullOrWhiteSpace(_context.GameInstallPath))
+                return "No game path found,\nrun the game or add the path manually in the paths tab";
+            return null;
+        }
+
+        if (_context.ProcessMemory is null)
+            return "This patch requires a running game process with memory access. Start the game first (and run as Administrator on Windows if needed), then try again.";
+
+        return null;
     }
 
     /// <summary>Reverts all currently-active patches. Safe to call on exit.</summary>

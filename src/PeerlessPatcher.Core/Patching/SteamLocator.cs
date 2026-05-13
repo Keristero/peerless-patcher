@@ -10,6 +10,11 @@ namespace PeerlessPatcher.Patching;
 /// </summary>
 public static class SteamLocator
 {
+    private static readonly StringComparer PathComparer =
+        RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+
     /// <summary>
     /// Returns the absolute path to the installed game directory for the given <paramref name="steamAppId"/>,
     /// or <c>null</c> if it cannot be found.
@@ -21,7 +26,10 @@ public static class SteamLocator
     /// </param>
     public static string? FindGameInstallPath(int steamAppId, string? installDir = null)
     {
-        var libraryPaths = GetLibraryFolders();
+        var libraryPaths = GetLibraryFolders().ToList();
+        var normalizedInstallDir = string.IsNullOrWhiteSpace(installDir)
+            ? null
+            : installDir.Trim();
 
         foreach (var lib in libraryPaths)
         {
@@ -40,15 +48,105 @@ public static class SteamLocator
 
             // Fallback: if the manifest is missing but we know the install dir name,
             // check whether the game directory itself is present (e.g. manifest was lost).
-            if (installDir is not null)
+            if (normalizedInstallDir is not null)
             {
-                var fallbackPath = Path.Combine(lib, "steamapps", "common", installDir);
+                var fallbackPath = Path.Combine(lib, "steamapps", "common", normalizedInstallDir);
                 if (Directory.Exists(fallbackPath))
                     return fallbackPath;
             }
         }
 
+        // Ordered fallback templates for common install layouts.
+        if (normalizedInstallDir is not null)
+        {
+            foreach (var candidate in GetTemplatedInstallCandidates(normalizedInstallDir))
+            {
+                if (Directory.Exists(candidate))
+                    return candidate;
+            }
+        }
+
+        // Last resort: Steam metadata can be stale/corrupt. Probe steamapps/common
+        // by directory name to recover installs that exist on disk.
+        if (normalizedInstallDir is not null)
+        {
+            foreach (var lib in libraryPaths)
+            {
+                var commonDir = Path.Combine(lib, "steamapps", "common");
+                if (!Directory.Exists(commonDir))
+                    continue;
+
+                try
+                {
+                    foreach (var dir in Directory.EnumerateDirectories(commonDir))
+                    {
+                        var name = Path.GetFileName(dir);
+                        if (string.IsNullOrWhiteSpace(name))
+                            continue;
+
+                        if (string.Equals(name, normalizedInstallDir, StringComparison.OrdinalIgnoreCase) ||
+                            name.Contains(normalizedInstallDir, StringComparison.OrdinalIgnoreCase) ||
+                            normalizedInstallDir.Contains(name, StringComparison.OrdinalIgnoreCase))
+                            return dir;
+                    }
+                }
+                catch
+                {
+                    // Non-critical: continue scanning other libraries.
+                }
+            }
+        }
+
         return null;
+    }
+
+    private static IEnumerable<string> GetTemplatedInstallCandidates(string installDir)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            if (!string.IsNullOrWhiteSpace(programFilesX86))
+                yield return Path.Combine(programFilesX86, "Steam", "steamapps", "common", installDir);
+
+            var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            if (!string.IsNullOrWhiteSpace(programFiles))
+                yield return Path.Combine(programFiles, "Steam", "steamapps", "common", installDir);
+
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (!string.IsNullOrWhiteSpace(localAppData))
+                yield return Path.Combine(localAppData, "Steam", "steamapps", "common", installDir);
+
+            // Common secondary library layouts by drive.
+            foreach (var drive in DriveInfo.GetDrives())
+            {
+                if (drive.DriveType != DriveType.Fixed || !drive.IsReady)
+                    continue;
+
+                var root = drive.RootDirectory.FullName;
+                yield return Path.Combine(root, "SteamLibrary", "steamapps", "common", installDir);
+                yield return Path.Combine(root, "Games", "SteamLibrary", "steamapps", "common", installDir);
+                yield return Path.Combine(root, "Steam", "steamapps", "common", installDir);
+            }
+
+            yield break;
+        }
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (!string.IsNullOrWhiteSpace(home))
+            {
+                yield return Path.Combine(home, ".steam", "steam", "steamapps", "common", installDir);
+                yield return Path.Combine(home, ".steam", "root", "steamapps", "common", installDir);
+                yield return Path.Combine(home, ".steam", "debian-installation", "steamapps", "common", installDir);
+                yield return Path.Combine(home, ".local", "share", "Steam", "steamapps", "common", installDir);
+                yield return Path.Combine(home, ".var", "app", "com.valvesoftware.Steam", "data", "Steam", "steamapps", "common", installDir);
+            }
+
+            var xdgDataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+            if (!string.IsNullOrWhiteSpace(xdgDataHome))
+                yield return Path.Combine(xdgDataHome, "Steam", "steamapps", "common", installDir);
+        }
     }
 
     // ── Library folder discovery ──────────────────────────────────────────────
@@ -71,23 +169,85 @@ public static class SteamLocator
                 all.AddRange(ReadLibraryFoldersVdf(vdf));
         }
 
-        return all.Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase);
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            all.AddRange(GetWindowsLibraryFallbacks());
+
+        return all.Where(Directory.Exists).Distinct(PathComparer);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static IEnumerable<string> GetWindowsLibraryFallbacks()
+    {
+        // Last-resort library probes for machines where registry/VDF metadata is stale.
+        foreach (var drive in DriveInfo.GetDrives())
+        {
+            if (drive.DriveType != DriveType.Fixed || !drive.IsReady)
+                continue;
+
+            var root = drive.RootDirectory.FullName;
+            yield return Path.Combine(root, "SteamLibrary");
+            yield return Path.Combine(root, "Games", "SteamLibrary");
+            yield return Path.Combine(root, "Steam");
+            yield return Path.Combine(root, "Program Files (x86)", "Steam");
+        }
     }
 
     [SupportedOSPlatform("windows")]
     private static IEnumerable<string> GetWindowsSteamRoots()
     {
-        // Primary install location from registry
-        using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
-            @"SOFTWARE\WOW6432Node\Valve\Steam") ??
-            Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Valve\Steam");
+        var foundPaths = new List<string>();
 
-        if (key?.GetValue("InstallPath") is string path && !string.IsNullOrEmpty(path))
+        // Steam can be installed machine-wide or per-user depending on installer mode.
+        // Check both HKCU and HKLM keys used by Steam clients.
+        var registryCandidates = new (Microsoft.Win32.RegistryHive Hive, string Key, string[] ValueNames)[]
+        {
+            (Microsoft.Win32.RegistryHive.CurrentUser, @"SOFTWARE\Valve\Steam", ["SteamPath", "InstallPath"]),
+            (Microsoft.Win32.RegistryHive.LocalMachine, @"SOFTWARE\WOW6432Node\Valve\Steam", ["InstallPath", "SteamPath"]),
+            (Microsoft.Win32.RegistryHive.LocalMachine, @"SOFTWARE\Valve\Steam", ["InstallPath", "SteamPath"]),
+        };
+
+        foreach (var (hive, keyPath, valueNames) in registryCandidates)
+        {
+            foreach (var view in new[] { Microsoft.Win32.RegistryView.Registry64, Microsoft.Win32.RegistryView.Registry32 })
+            {
+                Microsoft.Win32.RegistryKey? key = null;
+                try
+                {
+                    key = Microsoft.Win32.RegistryKey.OpenBaseKey(hive, view).OpenSubKey(keyPath);
+                    if (key is null) continue;
+
+                    foreach (var valueName in valueNames)
+                    {
+                        if (key.GetValue(valueName) is not string path) continue;
+                        var normalized = NormalizeRegistryPath(path);
+                        if (!string.IsNullOrWhiteSpace(normalized))
+                            foundPaths.Add(normalized);
+                    }
+                }
+                catch
+                {
+                    // Non-critical: continue with remaining candidates.
+                }
+                finally
+                {
+                    key?.Dispose();
+                }
+            }
+        }
+
+        foreach (var path in foundPaths.Distinct(PathComparer))
             yield return path;
 
-        // Common fallback
+        // Common filesystem fallbacks
         var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
         yield return Path.Combine(programFiles, "Steam");
+
+        var programFiles64 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        yield return Path.Combine(programFiles64, "Steam");
+
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (!string.IsNullOrWhiteSpace(localAppData))
+            yield return Path.Combine(localAppData, "Steam");
     }
 
     [SupportedOSPlatform("linux")]
@@ -96,6 +256,8 @@ public static class SteamLocator
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
         // Standard Steam on Linux locations
+        yield return Path.Combine(home, ".steam", "root");
+        yield return Path.Combine(home, ".steam", "debian-installation");
         yield return Path.Combine(home, ".steam", "steam");
         yield return Path.Combine(home, ".local", "share", "Steam");
 
@@ -112,12 +274,20 @@ public static class SteamLocator
 
         // Flatpak Steam
         yield return Path.Combine(home, ".var", "app", "com.valvesoftware.Steam", "data", "Steam");
+
+        // XDG data location can vary by distro/session.
+        var xdgDataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+        if (!string.IsNullOrWhiteSpace(xdgDataHome))
+            yield return Path.Combine(xdgDataHome, "Steam");
     }
 
     // ── VDF parsing (minimal — extracts "path" entries from libraryfolders.vdf) ──
 
     // Matches:  "path"   "/some/path"
     private static readonly Regex PathEntry = new(@"""path""\s+""([^""]+)""", RegexOptions.Compiled);
+
+    // Legacy Steam format (pre-library block objects):  "1"   "D:\\SteamLibrary"
+    private static readonly Regex LegacyLibraryEntry = new(@"^\s*""\d+""\s+""([^""]+)""\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
 
     private static IEnumerable<string> ReadLibraryFoldersVdf(string vdfPath)
     {
@@ -127,8 +297,16 @@ public static class SteamLocator
             var text = File.ReadAllText(vdfPath);
             foreach (Match m in PathEntry.Matches(text))
             {
-                var p = m.Groups[1].Value.Replace(@"\\", @"\");
-                if (!string.IsNullOrEmpty(p))
+                var p = NormalizeVdfPath(m.Groups[1].Value);
+                if (IsLikelyAbsolutePath(p))
+                    results.Add(p);
+            }
+
+            // Handle legacy numeric-key format while filtering non-path values.
+            foreach (Match m in LegacyLibraryEntry.Matches(text))
+            {
+                var p = NormalizeVdfPath(m.Groups[1].Value);
+                if (IsLikelyAbsolutePath(p))
                     results.Add(p);
             }
         }
@@ -137,6 +315,29 @@ public static class SteamLocator
             // Non-critical: silently skip unreadable VDF files
         }
         return results;
+    }
+
+    private static string NormalizeVdfPath(string rawPath)
+    {
+        if (string.IsNullOrWhiteSpace(rawPath)) return string.Empty;
+        return rawPath.Replace(@"\\", @"\").Trim();
+    }
+
+    private static bool IsLikelyAbsolutePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        return Path.IsPathRooted(path) ||
+               Regex.IsMatch(path, @"^[A-Za-z]:[\\/]") ||
+               path.StartsWith("/", StringComparison.Ordinal);
+    }
+
+    private static string NormalizeRegistryPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return string.Empty;
+
+        var normalized = path.Trim().Trim('"');
+        normalized = normalized.Replace('/', Path.DirectorySeparatorChar);
+        return normalized;
     }
 
     // ── ACF manifest parsing ──────────────────────────────────────────────────

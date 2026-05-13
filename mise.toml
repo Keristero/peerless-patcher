@@ -84,13 +84,29 @@ description = "Build self-contained Windows x64 directory (cross-compiles from L
 run = "dotnet publish src/PeerlessPatcher/PeerlessPatcher.csproj -c Release -r win-x64 --self-contained true -o dist/win-x64"
 
 [tasks."build:debug"]
-description = "Build debug linux-x64 binary (used by the run task)"
+description = "Build debug app for the current host platform"
+run = "dotnet build src/PeerlessPatcher/PeerlessPatcher.csproj -c Debug"
+sources = ["src/**/*.cs", "src/**/*.csproj", "profiles/**/*.json"]
+outputs = ["src/PeerlessPatcher/bin/Debug/net8.0/PeerlessPatcher.dll"]
+
+[tasks."build:debug:linux"]
+description = "Build debug linux-x64 binary"
 run = "dotnet build src/PeerlessPatcher/PeerlessPatcher.csproj -c Debug -r linux-x64 --no-self-contained"
 sources = ["src/**/*.cs", "src/**/*.csproj", "profiles/**/*.json"]
 outputs = ["src/PeerlessPatcher/bin/Debug/net8.0/linux-x64/PeerlessPatcher"]
 
 [tasks."run"]
-description = "Build (if needed) and run SteamGamePatcher natively on Linux"
+description = "Build (if needed) and run the app on the current host platform"
+run = "dotnet run --project src/PeerlessPatcher/PeerlessPatcher.csproj -c Debug --no-build"
+depends = ["build:debug"]
+
+[tasks."run_windows"]
+description = "Build (if needed) and run on Windows"
+run = "dotnet run --project src/PeerlessPatcher/PeerlessPatcher.csproj -c Debug --no-build"
+depends = ["build:debug"]
+
+[tasks."run:linux"]
+description = "Build (if needed) and run natively on Linux; supports Flatpak host-launch"
 run = """
 EXE=$(pwd)/src/PeerlessPatcher/bin/Debug/net8.0/linux-x64/PeerlessPatcher
 if [ -n "$FLATPAK_ID" ]; then
@@ -102,7 +118,7 @@ else
   "$EXE"
 fi
 """
-depends = ["build:debug"]
+depends = ["build:debug:linux"]
 
 [tasks."test"]
 description = "Run unit tests"

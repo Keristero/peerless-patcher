@@ -7,8 +7,8 @@
   "patches": [
     {
       "type": "file-hex-edit",
-      "name": "Ultrawide Aspect Ratio (Camera Structs)",
-      "description": "All five code-immediate AR writes to camera struct fields +0x408 and +0x428. All five required for gameplay ultrawide.",
+      "name": "Ultrawide Aspect Ratio",
+      "description": "Combined camera-struct and viewport ultrawide patch. Includes all five camera AR writes plus the viewport shadow-constant redirect chain required to remove gameplay pillarboxing without stretching UI.",
       "filePath": "KINGDOM HEARTS III/Binaries/Win64/KINGDOM HEARTS III.exe",
       "aspectRatioReplace": true,
       "sites": [
@@ -36,15 +36,7 @@
           "offset": 71440794,
           "findBytes": [50, 142, 227, 63],
           "notes": "E — mov [rdi+0x408], 1.7777f at 0x0442199A."
-        }
-      ]
-    },
-    {
-      "type": "file-hex-edit",
-      "name": "Ultrawide Aspect Ratio (Viewport)",
-      "description": "Shadow-constant redirect for the pillarbox float at 0x065675C8. Shadow slot at foff=0x065675DC receives the UW AR. Site 6 (0x065675C8) itself is NOT patched — callers 1-7 must keep reading 1.7777. Only caller 8 (movss xmm7 at foff=0x0411462B, the second-renderer viewport path) is redirected to the shadow. This is the sole caller that drives gameplay ultrawide without stretching the UI.",
-      "filePath": "KINGDOM HEARTS III/Binaries/Win64/KINGDOM HEARTS III.exe",
-      "sites": [
+        },
         {
           "offset": 97816768,
           "findBytes": [57, 142, 227, 63],
